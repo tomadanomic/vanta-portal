@@ -62,96 +62,69 @@ export default function RevenueTab() {
   }
 
   return (
-    <div className="space-y-8">
-      {/* Date Filters */}
-      <div className="rounded-2xl backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/20 dark:from-white/5 dark:to-white/10 border border-white/50 dark:border-white/10 p-6">
-        <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-4">
-          📅 Filter by Date
+    <div className="space-y-4 sm:space-y-8 w-full overflow-x-hidden">
+      {/* Date Filters - Mobile Optimized */}
+      <div className="rounded-lg sm:rounded-2xl backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/20 dark:from-white/5 dark:to-white/10 border border-white/50 dark:border-white/10 p-3 sm:p-6">
+        <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-3">
+          📅 Date
         </p>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div>
-            <label className="block text-xs text-slate-600 dark:text-slate-400 mb-2">From</label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg bg-white/50 dark:bg-slate-900/50 border border-white/30 dark:border-white/10 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-blue-500 transition"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-slate-600 dark:text-slate-400 mb-2">To</label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg bg-white/50 dark:bg-slate-900/50 border border-white/30 dark:border-white/10 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-blue-500 transition"
-            />
-          </div>
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+          <input
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            className="flex-1 px-3 py-2 text-sm rounded-lg bg-white/50 dark:bg-slate-900/50 border border-white/30 dark:border-white/10 text-slate-900 dark:text-white focus:outline-none focus:border-blue-500 transition"
+          />
+          <input
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            className="flex-1 px-3 py-2 text-sm rounded-lg bg-white/50 dark:bg-slate-900/50 border border-white/30 dark:border-white/10 text-slate-900 dark:text-white focus:outline-none focus:border-blue-500 transition"
+          />
           {(startDate || endDate) && (
-            <div className="sm:col-span-2 flex items-end">
-              <button
-                onClick={() => {
-                  setStartDate('')
-                  setEndDate('')
-                }}
-                className="w-full px-3 py-2 bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-white text-sm font-medium rounded-lg hover:bg-slate-300 dark:hover:bg-slate-700 transition"
-              >
-                Clear Dates
-              </button>
-            </div>
+            <button
+              onClick={() => {
+                setStartDate('')
+                setEndDate('')
+              }}
+              className="px-3 py-2 text-sm bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-white font-medium rounded-lg hover:bg-slate-300 dark:hover:bg-slate-700 transition"
+            >
+              Clear
+            </button>
           )}
         </div>
       </div>
 
-      {/* Main Stats with Glass Effect */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Main Stats - Mobile Responsive */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-6">
         {[
-          { label: '💵 Cash Collected', value: `AED ${stats.collectedCash}`, subtext: `${delivered.length} delivered`, color: 'from-emerald-500 to-emerald-600' },
-          { label: '⏳ Pending Cash', value: `AED ${stats.pendingCash}`, subtext: `${pending.length} pending`, color: 'from-amber-500 to-amber-600' },
-          { label: '📊 Total Revenue', value: `AED ${stats.totalRevenue}`, subtext: `From ${stats.totalOrders} orders`, color: 'from-blue-500 to-blue-600' }
+          { label: 'Total', value: `AED ${stats.totalRevenue}`, color: 'from-slate-500 to-slate-600' },
+          { label: 'Collected', value: `AED ${stats.collectedCash}`, color: 'from-emerald-500 to-emerald-600' },
+          { label: 'Pending', value: `AED ${stats.pendingCash}`, color: 'from-amber-500 to-amber-600' },
+          { label: 'Orders', value: stats.totalOrders, color: 'from-blue-500 to-blue-600' },
+          { label: 'Avg', value: `AED ${stats.avgOrderValue}`, color: 'from-purple-500 to-purple-600' }
         ].map((stat, idx) => (
           <div
             key={idx}
-            className="relative rounded-2xl backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/20 dark:from-white/5 dark:to-white/10 border border-white/50 dark:border-white/10 p-8 overflow-hidden group hover:border-white/70 dark:hover:border-white/20 transition"
+            className="rounded-lg sm:rounded-2xl backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/20 dark:from-white/5 dark:to-white/10 border border-white/50 dark:border-white/10 p-3 sm:p-6 overflow-hidden"
           >
-            <div className={`absolute inset-0 bg-gradient-to-br ${stat.color} opacity-5 group-hover:opacity-10 transition`}></div>
-            <p className="text-slate-600 dark:text-slate-400 text-sm font-medium mb-2 relative z-10">
+            <div className={`absolute inset-0 bg-gradient-to-br ${stat.color} opacity-5`}></div>
+            <p className="text-xs text-slate-600 dark:text-slate-400 font-medium mb-1 sm:mb-2 relative z-10 truncate">
               {stat.label}
             </p>
-            <p className="text-5xl font-semibold text-slate-900 dark:text-white relative z-10">
-              {stat.value}
-            </p>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-3 relative z-10">
-              {stat.subtext}
-            </p>
-          </div>
-        ))}
-      </div>
-
-      {/* Secondary Stats */}
-      <div className="grid grid-cols-2 gap-4">
-        {[
-          { label: 'Avg Order Value', value: `AED ${stats.avgOrderValue}` },
-          { label: 'Collection Rate', value: `${orders.length > 0 ? Math.round((delivered.length / orders.length) * 100) : 0}%` }
-        ].map((stat, idx) => (
-          <div
-            key={idx}
-            className="rounded-2xl backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/20 dark:from-white/5 dark:to-white/10 border border-white/50 dark:border-white/10 p-6"
-          >
-            <p className="text-slate-600 dark:text-slate-400 text-sm font-medium mb-2">
-              {stat.label}
-            </p>
-            <p className="text-3xl font-semibold text-slate-900 dark:text-white">
+            <p className="text-sm sm:text-2xl font-semibold text-slate-900 dark:text-white relative z-10 break-words">
               {stat.value}
             </p>
           </div>
         ))}
       </div>
 
-      {/* Cash Flow by Product */}
+      {/* Revenue by Product - Mobile Friendly */}
       <div>
-        <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Revenue by Product</h3>
-        <div className="space-y-3">
+        <h3 className="text-base sm:text-lg font-semibold text-slate-900 dark:text-white mb-3 sm:mb-4">
+          Revenue by Product
+        </h3>
+        <div className="space-y-2 sm:space-y-3">
           {Object.entries(
             filteredOrders.reduce((acc, order) => {
               const product = order.product_name
@@ -163,11 +136,15 @@ export default function RevenueTab() {
             .map(([product, revenue]) => (
               <div
                 key={product}
-                className="rounded-2xl backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/20 dark:from-white/5 dark:to-white/10 border border-white/50 dark:border-white/10 p-4 hover:border-white/70 dark:hover:border-white/20 transition"
+                className="rounded-lg sm:rounded-2xl backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/20 dark:from-white/5 dark:to-white/10 border border-white/50 dark:border-white/10 p-3 sm:p-4 hover:border-white/70 dark:hover:border-white/20 transition"
               >
-                <div className="flex justify-between items-center mb-3">
-                  <p className="text-slate-900 dark:text-white font-medium">{product}</p>
-                  <p className="text-emerald-600 dark:text-emerald-400 font-semibold">AED {revenue}</p>
+                <div className="flex justify-between items-start gap-2 mb-2">
+                  <p className="text-slate-900 dark:text-white font-medium text-xs sm:text-sm break-words flex-1">
+                    {product}
+                  </p>
+                  <p className="text-emerald-600 dark:text-emerald-400 font-semibold text-xs sm:text-sm flex-shrink-0">
+                    AED {revenue}
+                  </p>
                 </div>
                 <div className="h-2 bg-slate-200/50 dark:bg-slate-800/50 rounded-full overflow-hidden">
                   <div
@@ -180,20 +157,28 @@ export default function RevenueTab() {
         </div>
       </div>
 
-      {/* Recent Collections */}
+      {/* Recent Collections - Mobile Optimized */}
       <div>
-        <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Recent Collections</h3>
+        <h3 className="text-base sm:text-lg font-semibold text-slate-900 dark:text-white mb-3 sm:mb-4">
+          Recent Collections
+        </h3>
         <div className="space-y-2">
           {filteredDelivered.slice(0, 10).map(order => (
             <div
               key={order.id}
-              className="flex justify-between items-center p-4 rounded-xl backdrop-blur-xl bg-gradient-to-br from-white/30 to-white/10 dark:from-white/5 dark:to-white/0 border border-white/30 dark:border-white/10 hover:border-white/50 dark:hover:border-white/20 transition"
+              className="flex justify-between items-start gap-2 p-3 sm:p-4 rounded-lg sm:rounded-xl backdrop-blur-xl bg-gradient-to-br from-white/30 to-white/10 dark:from-white/5 dark:to-white/0 border border-white/30 dark:border-white/10 hover:border-white/50 dark:hover:border-white/20 transition"
             >
-              <div>
-                <p className="text-slate-900 dark:text-white font-medium">{order.customer_name}</p>
-                <p className="text-sm text-slate-600 dark:text-slate-400">{order.product_name}</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-slate-900 dark:text-white font-medium text-xs sm:text-sm truncate">
+                  {order.customer_name}
+                </p>
+                <p className="text-xs text-slate-600 dark:text-slate-400 truncate">
+                  {order.product_name}
+                </p>
               </div>
-              <p className="text-emerald-600 dark:text-emerald-400 font-semibold">AED {order.total_amount}</p>
+              <p className="text-emerald-600 dark:text-emerald-400 font-semibold text-xs sm:text-sm flex-shrink-0">
+                AED {order.total_amount}
+              </p>
             </div>
           ))}
         </div>

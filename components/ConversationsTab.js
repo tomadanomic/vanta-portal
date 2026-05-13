@@ -117,38 +117,38 @@ export default function ConversationsTab() {
     : conversations.filter(c => c.isAnswered)
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 min-h-screen lg:min-h-96">
-      {/* Left Panel: Conversations List */}
-      <div className="lg:col-span-1 rounded-2xl backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/20 dark:from-white/5 dark:to-white/10 border border-white/50 dark:border-white/10 p-6 flex flex-col h-fit lg:sticky lg:top-40">
-        <div className="mb-6 pb-6 border-b border-white/20 dark:border-white/10">
-          <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-4">
-            💬 Conversations
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 min-h-screen lg:min-h-96 w-full overflow-x-hidden">
+      {/* Left Panel: Conversations List - Mobile Optimized */}
+      <div className="lg:col-span-1 rounded-lg sm:rounded-2xl backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/20 dark:from-white/5 dark:to-white/10 border border-white/50 dark:border-white/10 p-3 sm:p-6 h-fit lg:sticky lg:top-40">
+        <div className="mb-4 sm:mb-6 pb-4 sm:pb-6 border-b border-white/20 dark:border-white/10">
+          <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-3">
+            💬 Chats
           </h3>
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-1 sm:gap-2 flex-wrap">
             {['all', 'unanswered', 'answered'].map(f => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
-                className={`px-3 py-1 rounded-lg text-xs font-medium transition ${
+                className={`px-2 sm:px-3 py-1 rounded-lg text-xs font-medium transition whitespace-nowrap ${
                   filter === f
                     ? 'bg-slate-900 dark:bg-white text-white dark:text-black'
                     : 'bg-slate-100/50 dark:bg-slate-900/50 text-slate-600 dark:text-slate-400'
                 }`}
               >
-                {f === 'all' ? 'All' : f === 'unanswered' ? '🔴 Unanswered' : '✅ Answered'}
+                {f === 'all' ? 'All' : f === 'unanswered' ? '🔴 New' : '✅ Done'}
               </button>
             ))}
           </div>
         </div>
 
-        <div className="space-y-2 overflow-y-auto">
+        <div className="space-y-2 max-h-96 lg:max-h-none overflow-y-auto">
           {isLoading ? (
-            <div className="text-center py-8 text-slate-500 dark:text-slate-400 text-sm">
+            <div className="text-center py-8 text-slate-500 dark:text-slate-400 text-xs">
               Loading...
             </div>
           ) : filteredConversations.length === 0 ? (
-            <div className="text-center py-8 text-slate-500 dark:text-slate-400 text-sm">
-              No conversations
+            <div className="text-center py-8 text-slate-500 dark:text-slate-400 text-xs">
+              No chats
             </div>
           ) : (
             filteredConversations.map(conv => (
@@ -158,28 +158,28 @@ export default function ConversationsTab() {
                   setSelectedUser(conv.userId)
                   loadUserMessages(conv.userId)
                 }}
-                className={`w-full text-left p-4 rounded-xl backdrop-blur-xl border transition-all ${
+                className={`w-full text-left p-3 rounded-lg backdrop-blur-xl border transition-all text-xs sm:text-sm ${
                   selectedUser === conv.userId
                     ? 'bg-gradient-to-br from-blue-500/20 to-blue-400/10 dark:from-blue-600/30 dark:to-blue-500/20 border-blue-400/50 dark:border-blue-500/50 ring-2 ring-blue-400/30'
                     : 'bg-gradient-to-br from-white/30 to-white/10 dark:from-white/5 dark:to-white/0 border-white/30 dark:border-white/10 hover:border-white/50 dark:hover:border-white/20'
                 }`}
               >
                 <div className="flex items-start justify-between gap-2 mb-2">
-                  <p className="text-slate-900 dark:text-white font-medium text-sm truncate">
-                    ID: {conv.userId}
+                  <p className="text-slate-900 dark:text-white font-medium truncate">
+                    {conv.userId}
                   </p>
                   {conv.hasUnanswered && (
-                    <span className="flex-shrink-0 flex items-center gap-1 px-2 py-1 rounded-full bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400 text-xs font-semibold whitespace-nowrap">
-                      <span className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></span>
+                    <span className="flex-shrink-0 flex items-center gap-1 px-2 py-0.5 rounded-full bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400 text-xs font-semibold whitespace-nowrap">
+                      <span className="w-1.5 h-1.5 bg-orange-500 rounded-full animate-pulse"></span>
                       New
                     </span>
                   )}
                 </div>
-                <p className="text-sm text-slate-600 dark:text-slate-400 truncate mb-2 line-clamp-2">
+                <p className="text-slate-600 dark:text-slate-400 truncate mb-1 line-clamp-1 text-xs">
                   {conv.lastMessage.event_data}
                 </p>
                 <p className="text-xs text-slate-500 dark:text-slate-500">
-                  {conv.messageCount} message{conv.messageCount !== 1 ? 's' : ''}
+                  {conv.messageCount} msg{conv.messageCount !== 1 ? 's' : ''}
                 </p>
               </button>
             ))
@@ -187,22 +187,24 @@ export default function ConversationsTab() {
         </div>
       </div>
 
-      {/* Right Panel: Message Thread */}
+      {/* Right Panel: Message Thread - Mobile Full Width Below */}
       <div className="lg:col-span-2">
         {selectedUser ? (
-          <div className="rounded-2xl backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/20 dark:from-white/5 dark:to-white/10 border border-white/50 dark:border-white/10 h-full flex flex-col overflow-hidden">
-            {/* Header with Clear Divider */}
-            <div className="border-b-2 border-slate-200 dark:border-slate-800 p-6 backdrop-blur-sm bg-white/50 dark:bg-slate-900/50">
-              <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2 font-semibold">
-                Customer ID
+          <div className="rounded-lg sm:rounded-2xl backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/20 dark:from-white/5 dark:to-white/10 border border-white/50 dark:border-white/10 h-full flex flex-col overflow-hidden">
+            {/* Header */}
+            <div className="border-b-2 border-slate-200 dark:border-slate-800 p-3 sm:p-6 backdrop-blur-sm bg-white/50 dark:bg-slate-900/50">
+              <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1 font-semibold">
+                Chat with
               </p>
-              <p className="text-lg font-semibold text-slate-900 dark:text-white">{selectedUser}</p>
+              <p className="text-base sm:text-lg font-semibold text-slate-900 dark:text-white break-all">
+                {selectedUser}
+              </p>
             </div>
 
-            {/* Messages with Clear Divider */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gradient-to-b from-transparent to-slate-50/50 dark:to-slate-900/20">
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-3 bg-gradient-to-b from-transparent to-slate-50/50 dark:to-slate-900/20">
               {userMessages.length === 0 ? (
-                <div className="flex items-center justify-center h-full text-slate-500 dark:text-slate-400">
+                <div className="flex items-center justify-center h-full text-slate-500 dark:text-slate-400 text-sm">
                   No messages yet
                 </div>
               ) : (
@@ -213,13 +215,13 @@ export default function ConversationsTab() {
                   >
                     <div className="flex flex-col gap-1">
                       <div
-                        className={`max-w-sm px-4 py-3 rounded-2xl backdrop-blur-sm ${
+                        className={`max-w-xs px-3 py-2 rounded-xl backdrop-blur-sm text-xs sm:text-sm ${
                           msg.event_type === 'ADMIN_REPLY'
                             ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-br-none'
                             : 'bg-gradient-to-br from-slate-200/70 to-slate-100/70 dark:from-slate-800/70 dark:to-slate-900/70 text-slate-900 dark:text-slate-100 rounded-bl-none border border-white/30 dark:border-white/10'
                         }`}
                       >
-                        <p className="text-sm break-words">{msg.event_data}</p>
+                        <p className="break-words">{msg.event_data}</p>
                       </div>
                       <p className={`text-xs px-2 ${
                         msg.event_type === 'ADMIN_REPLY'
@@ -237,24 +239,24 @@ export default function ConversationsTab() {
               )}
             </div>
 
-            {/* Reply Input with Clear Divider */}
-            <div className="border-t-2 border-slate-200 dark:border-slate-800 p-6 backdrop-blur-sm bg-white/50 dark:bg-slate-900/50">
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-3">
-                Reply as Matt
+            {/* Reply Input */}
+            <div className="border-t-2 border-slate-200 dark:border-slate-800 p-3 sm:p-6 backdrop-blur-sm bg-white/50 dark:bg-slate-900/50">
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-2 sm:mb-3">
+                Reply
               </label>
-              <div className="flex gap-3">
+              <div className="flex gap-2 sm:gap-3">
                 <input
                   type="text"
                   value={replyText}
                   onChange={(e) => setReplyText(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && sendReply()}
-                  placeholder="Type your message..."
-                  className="flex-1 px-4 py-3 rounded-xl bg-white/60 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 focus:outline-none focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 transition backdrop-blur-sm"
+                  placeholder="Type message..."
+                  className="flex-1 px-3 py-2 text-xs sm:text-sm rounded-lg bg-white/60 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 focus:outline-none focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 transition backdrop-blur-sm"
                 />
                 <button
                   onClick={sendReply}
                   disabled={!replyText.trim() || sending}
-                  className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 disabled:from-slate-400 disabled:to-slate-500 text-white font-medium rounded-xl transition-all disabled:opacity-50"
+                  className="px-3 sm:px-6 py-2 text-xs sm:text-sm bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 disabled:from-slate-400 disabled:to-slate-500 text-white font-medium rounded-lg transition-all disabled:opacity-50 flex-shrink-0"
                 >
                   Send
                 </button>
@@ -262,11 +264,11 @@ export default function ConversationsTab() {
             </div>
           </div>
         ) : (
-          <div className="rounded-2xl backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/20 dark:from-white/5 dark:to-white/10 border border-white/50 dark:border-white/10 h-full flex items-center justify-center">
+          <div className="rounded-lg sm:rounded-2xl backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/20 dark:from-white/5 dark:to-white/10 border border-white/50 dark:border-white/10 h-full hidden lg:flex items-center justify-center">
             <div className="text-center">
               <p className="text-3xl mb-2">💬</p>
-              <p className="text-slate-500 dark:text-slate-400">
-                Select a conversation from the left to start replying
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Select a chat to start
               </p>
             </div>
           </div>

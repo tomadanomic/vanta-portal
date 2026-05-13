@@ -12,21 +12,12 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_KEY?.replace(/\s/g, '')
 )
 
-export default function Dashboard() {
+export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState('orders')
-  const [isLoading, setIsLoading] = useState(true)
   const [unreadCount, setUnreadCount] = useState(0)
   const { isDark, setIsDark } = useTheme()
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const password = localStorage.getItem('portal_auth')
-      if (!password) {
-        window.location.href = '/'
-      }
-      setIsLoading(false)
-    }
-    checkAuth()
     loadUnreadCount()
     const interval = setInterval(loadUnreadCount, 5000)
     return () => clearInterval(interval)
@@ -36,103 +27,72 @@ export default function Dashboard() {
     try {
       const { data, error } = await supabase
         .from('conversations')
-        .select('telegram_user_id, event_type')
-        .eq('event_type', 'CUSTOMER_QUESTION')
-        .order('created_at', { ascending: false })
+        .select('telegram_user_id')
 
       if (error) throw error
 
-      const customerQuestions = data?.filter(m => m.event_type === 'CUSTOMER_QUESTION') || []
+      const unanswered = new Set()
       const answered = new Set()
 
-      const allData = await supabase
-        .from('conversations')
-        .select('telegram_user_id, event_type')
-        .eq('event_type', 'ADMIN_REPLY')
-
-      allData.data?.forEach(m => {
-        answered.add(m.telegram_user_id)
+      data?.forEach(conv => {
+        if (conv.event_type === 'ADMIN_REPLY') {
+          answered.add(conv.telegram_user_id)
+        }
       })
 
-      const unanswered = customerQuestions.filter(m => !answered.has(m.telegram_user_id))
-      setUnreadCount(unanswered.length)
+      data?.forEach(conv => {
+        if (conv.event_type === 'CUSTOMER_QUESTION' && !answered.has(conv.telegram_user_id)) {
+          unanswered.add(conv.telegram_user_id)
+        }
+      })
+
+      setUnreadCount(unanswered.size)
     } catch (err) {
       console.error('Error loading unread count:', err)
     }
   }
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-black flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 border-3 border-slate-300 dark:border-slate-700 border-t-slate-900 dark:border-t-white rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-slate-600 dark:text-slate-400">Loading dashboard...</p>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-950 dark:via-black dark:to-slate-900 transition-colors">
-      {/* Header with Glass Effect */}
-      <div className="sticky top-0 z-50 backdrop-blur-xl bg-white/70 dark:bg-slate-950/70 border-b border-slate-200/50 dark:border-slate-800/50">
-        <div className="max-w-7xl mx-auto px-6 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-semibold bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:to-slate-300 bg-clip-text text-transparent">
+      {/* Fixed Header */}
+      <div className="sticky top-0 z-40 backdrop-blur-xl bg-white/50 dark:bg-slate-950/50 border-b border-slate-200 dark:border-slate-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-3 min-w-0">
+              <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:to-slate-300 bg-clip-text text-transparent truncate">
                 VANTA
               </h1>
-              <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Admin Portal</p>
+              <p className="hidden sm:block text-slate-500 dark:text-slate-400 text-sm">Admin Portal</p>
             </div>
-            <div className="flex items-center gap-4">
-              {unreadCount > 0 && (
-                <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-orange-100 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-800/50">
-                  <span className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></span>
-                  <span className="text-sm font-medium text-orange-700 dark:text-orange-400">{unreadCount} unanswered</span>
-                </div>
-              )}
-              <button
-                onClick={() => setIsDark(!isDark)}
-                className="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 transition"
-                title={isDark ? 'Light mode' : 'Dark mode'}
-              >
-                {isDark ? '☀️' : '🌙'}
-              </button>
-              <button
-                onClick={() => {
-                  localStorage.removeItem('portal_auth')
-                  window.location.href = '/'
-                }}
-                className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition"
-              >
-                Sign Out
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Navigation Tabs with Glass Effect */}
-      <div className="sticky top-20 z-40 backdrop-blur-xl bg-white/50 dark:bg-slate-950/50 border-b border-slate-200/50 dark:border-slate-800/50">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="flex gap-8">
+            <button
+              onClick={() => setIsDark(!isDark)}
+              className="p-2 sm:p-3 rounded-lg backdrop-blur-xl bg-white/40 dark:bg-white/5 border border-white/50 dark:border-white/10 hover:border-white/70 dark:hover:border-white/20 transition flex-shrink-0"
+              title={isDark ? 'Light mode' : 'Dark mode'}
+            >
+              {isDark ? '☀️' : '🌙'}
+            </button>
+          </div>
+
+          {/* Tab Navigation - Mobile Optimized */}
+          <div className="flex gap-1 sm:gap-8 mt-4 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
             {[
               { id: 'orders', label: '📦 Orders' },
-              { id: 'conversations', label: '💬 Conversations', badge: unreadCount > 0 ? unreadCount : null },
+              { id: 'conversations', label: '💬 Chat', badge: unreadCount > 0 ? unreadCount : null },
               { id: 'revenue', label: '💰 Revenue' }
             ].map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`py-4 px-1 border-b-2 font-medium transition whitespace-nowrap relative ${
+                className={`px-3 sm:px-4 py-2 text-sm sm:text-base font-semibold whitespace-nowrap flex items-center gap-2 relative transition ${
                   activeTab === tab.id
-                    ? 'border-slate-900 dark:border-white text-slate-900 dark:text-white'
-                    : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
+                    ? 'text-slate-900 dark:text-white border-b-2 border-slate-900 dark:border-white'
+                    : 'text-slate-600 dark:text-slate-400 border-b-2 border-transparent hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 {tab.label}
-                {tab.badge && tab.badge > 0 && (
-                  <span className="ml-2 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-orange-500 rounded-full">
+                {tab.badge && (
+                  <span className="flex items-center justify-center min-w-5 h-5 bg-orange-500 text-white text-xs font-bold rounded-full">
                     {tab.badge}
                   </span>
                 )}
@@ -142,8 +102,8 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Content with Glass Cards */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      {/* Main Content - Mobile Safe */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {activeTab === 'orders' && <OrdersTab setActiveTab={setActiveTab} />}
         {activeTab === 'conversations' && <ConversationsTab />}
         {activeTab === 'revenue' && <RevenueTab />}
