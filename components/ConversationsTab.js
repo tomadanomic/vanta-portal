@@ -123,7 +123,7 @@ export default function ConversationsTab() {
       <div className="lg:col-span-1">
         <div className="mb-4">
           <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-3">
-            Conversations
+            💬 Select a Conversation to Reply
           </h3>
           <div className="flex gap-2">
             {['all', 'unanswered', 'answered'].map(f => (

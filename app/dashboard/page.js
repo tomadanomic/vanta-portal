@@ -118,7 +118,7 @@ export default function Dashboard() {
           <div className="flex gap-8">
             {[
               { id: 'orders', label: '📦 Orders' },
-              { id: 'conversations', label: '💬 Conversations', badge: unreadCount },
+              { id: 'conversations', label: '💬 Conversations', badge: unreadCount > 0 ? unreadCount : null },
               { id: 'revenue', label: '💰 Revenue' }
             ].map(tab => (
               <button

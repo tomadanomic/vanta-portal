@@ -12,12 +12,20 @@ export default function OrdersTab({ setActiveTab }) {
   const [orders, setOrders] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [filter, setFilter] = useState('all')
+  const [selectedOrder, setSelectedOrder] = useState(null)
+  const [conversations, setConversations] = useState([])
 
   useEffect(() => {
     loadOrders()
     const interval = setInterval(loadOrders, 5000)
     return () => clearInterval(interval)
   }, [])
+
+  useEffect(() => {
+    if (selectedOrder) {
+      loadConversations(selectedOrder.telegram_user_id)
+    }
+  }, [selectedOrder])
 
   async function loadOrders() {
     try {
@@ -35,8 +43,22 @@ export default function OrdersTab({ setActiveTab }) {
     }
   }
 
-  async function markAsDelivered(orderId, e) {
-    e.stopPropagation()
+  async function loadConversations(userId) {
+    try {
+      const { data, error } = await supabase
+        .from('conversations')
+        .select('*')
+        .eq('telegram_user_id', userId)
+        .order('created_at', { ascending: true })
+
+      if (error) throw error
+      setConversations(data || [])
+    } catch (err) {
+      console.error('Error loading conversations:', err)
+    }
+  }
+
+  async function markAsDelivered(orderId) {
     try {
       const { error } = await supabase
         .from('orders')
@@ -45,6 +67,9 @@ export default function OrdersTab({ setActiveTab }) {
 
       if (error) throw error
       await loadOrders()
+      if (selectedOrder?.id === orderId) {
+        setSelectedOrder({ ...selectedOrder, delivery_status: 'delivered' })
+      }
     } catch (err) {
       console.error('Error updating order:', err)
     }
@@ -58,31 +83,26 @@ export default function OrdersTab({ setActiveTab }) {
     total: orders.length,
     pending: orders.filter(o => o.delivery_status === 'pending').length,
     delivered: orders.filter(o => o.delivery_status === 'delivered').length,
-    revenue: orders.reduce((sum, o) => sum + (o.total_amount || 0), 0),
-    collectedCash: orders
-      .filter(o => o.delivery_status === 'delivered')
-      .reduce((sum, o) => sum + (o.total_amount || 0), 0)
   }
 
   return (
-    <div className="space-y-8">
-      {/* Stats Grid with Glass Effect */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="space-y-6">
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
           { label: 'Total Orders', value: stats.total, color: 'from-slate-500 to-slate-600' },
           { label: 'Pending', value: stats.pending, color: 'from-amber-500 to-amber-600' },
-          { label: 'Delivered', value: stats.delivered, color: 'from-emerald-500 to-emerald-600' },
-          { label: 'Cash Collected', value: `AED ${stats.collectedCash}`, color: 'from-blue-500 to-blue-600' }
+          { label: 'Delivered', value: stats.delivered, color: 'from-emerald-500 to-emerald-600' }
         ].map((stat, idx) => (
           <div
             key={idx}
-            className="relative rounded-2xl backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/20 dark:from-white/5 dark:to-white/10 border border-white/50 dark:border-white/10 p-6 overflow-hidden group hover:border-white/70 dark:hover:border-white/20 transition"
+            className="relative rounded-2xl backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/20 dark:from-white/5 dark:to-white/10 border border-white/50 dark:border-white/10 p-6 overflow-hidden"
           >
-            <div className={`absolute inset-0 bg-gradient-to-br ${stat.color} opacity-5 group-hover:opacity-10 transition`}></div>
+            <div className={`absolute inset-0 bg-gradient-to-br ${stat.color} opacity-5`}></div>
             <p className="text-slate-600 dark:text-slate-400 text-sm font-medium mb-2 relative z-10">
               {stat.label}
             </p>
-            <p className="text-4xl font-semibold text-slate-900 dark:text-white relative z-10">
+            <p className="text-3xl font-semibold text-slate-900 dark:text-white relative z-10">
               {stat.value}
             </p>
           </div>
@@ -106,108 +126,203 @@ export default function OrdersTab({ setActiveTab }) {
         ))}
       </div>
 
-      {/* Orders List */}
-      <div className="space-y-4">
+      {/* Compact Orders Table */}
+      <div className="rounded-2xl backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/20 dark:from-white/5 dark:to-white/10 border border-white/50 dark:border-white/10 overflow-hidden">
         {isLoading ? (
           <div className="text-center py-12 text-slate-500 dark:text-slate-400">Loading orders...</div>
         ) : filteredOrders.length === 0 ? (
           <div className="text-center py-12 text-slate-500 dark:text-slate-400">No orders found</div>
         ) : (
-          filteredOrders.map(order => (
-            <button
-              key={order.id}
-              onClick={() => setActiveTab('conversations')}
-              className="w-full text-left rounded-2xl backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/20 dark:from-white/5 dark:to-white/10 border border-white/50 dark:border-white/10 p-6 hover:border-white/70 dark:hover:border-white/20 hover:shadow-xl transition-all group"
-            >
-              {/* Header */}
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 font-mono mb-1">
-                    Order {order.id.slice(0, 8).toUpperCase()}
-                  </p>
-                  <p className="text-lg font-semibold text-slate-900 dark:text-white group-hover:text-slate-700 dark:group-hover:text-slate-200 transition">
-                    {order.product_name}
-                  </p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium backdrop-blur-sm ${
-                    order.delivery_status === 'pending'
-                      ? 'bg-amber-100/40 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 border border-amber-200/50 dark:border-amber-800/50'
-                      : 'bg-emerald-100/40 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-800/50'
-                  }`}>
-                    {order.delivery_status === 'pending' ? '⏳ Pending' : '✅ Delivered'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Customer Info */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4 pb-4 border-b border-slate-200/50 dark:border-slate-800/50">
-                <div>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-white/20 dark:border-white/10">
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide">
+                    Order
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide">
                     Customer
-                  </p>
-                  <p className="text-slate-900 dark:text-white font-medium">{order.customer_name}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">
-                    Phone
-                  </p>
-                  <p className="text-slate-900 dark:text-white">{order.customer_phone}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">
-                    Quantity
-                  </p>
-                  <p className="text-slate-900 dark:text-white">{order.quantity} units</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">
-                    Total
-                  </p>
-                  <p className="text-slate-900 dark:text-white font-semibold text-lg">
-                    AED {order.total_amount}
-                  </p>
-                </div>
-              </div>
-
-              {/* Delivery Info */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-4 pb-4 border-b border-slate-200/50 dark:border-slate-800/50">
-                <div>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">
-                    Delivery Date
-                  </p>
-                  <p className="text-slate-900 dark:text-white">{order.delivery_date}</p>
-                </div>
-                <div className="sm:col-span-2">
-                  <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">
-                    Address
-                  </p>
-                  <p className="text-slate-900 dark:text-white">{order.address}</p>
-                </div>
-              </div>
-
-              {/* Footer with Action */}
-              <div className="flex justify-between items-center">
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  {new Date(order.created_at).toLocaleDateString()} at{' '}
-                  {new Date(order.created_at).toLocaleTimeString([], {
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  })}
-                </p>
-                {order.delivery_status === 'pending' && (
-                  <button
-                    onClick={(e) => markAsDelivered(order.id, e)}
-                    className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white text-sm font-medium rounded-lg transition-all"
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide">
+                    Product
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide">
+                    Amount
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide">
+                    Status
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide">
+                    Date
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/10 dark:divide-white/5">
+                {filteredOrders.map(order => (
+                  <tr
+                    key={order.id}
+                    onClick={() => setSelectedOrder(order)}
+                    className="cursor-pointer hover:bg-white/20 dark:hover:bg-white/5 transition group"
                   >
-                    ✓ Mark Delivered
-                  </button>
-                )}
-              </div>
-            </button>
-          ))
+                    <td className="px-6 py-4 text-sm font-mono text-slate-900 dark:text-slate-300">
+                      {order.id.slice(0, 8).toUpperCase()}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-slate-900 dark:text-slate-300 font-medium">
+                      {order.customer_name}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-slate-700 dark:text-slate-400">
+                      {order.product_name.split(',')[0]}
+                    </td>
+                    <td className="px-6 py-4 text-sm font-semibold text-slate-900 dark:text-white">
+                      AED {order.total_amount}
+                    </td>
+                    <td className="px-6 py-4 text-sm">
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        order.delivery_status === 'pending'
+                          ? 'bg-amber-100/50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
+                          : 'bg-emerald-100/50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
+                      }`}>
+                        {order.delivery_status === 'pending' ? '⏳ Pending' : '✅ Delivered'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-slate-500 dark:text-slate-400">
+                      {new Date(order.created_at).toLocaleDateString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
+
+      {/* Order Detail Modal */}
+      {selectedOrder && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-950 rounded-3xl max-w-4xl w-full max-h-96 overflow-y-auto border border-slate-200 dark:border-slate-800 shadow-2xl">
+            <div className="sticky top-0 bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 p-6 flex justify-between items-center">
+              <div>
+                <p className="text-sm text-slate-500 dark:text-slate-400 font-mono mb-1">
+                  Order {selectedOrder.id.slice(0, 8).toUpperCase()}
+                </p>
+                <h3 className="text-2xl font-semibold text-slate-900 dark:text-white">
+                  {selectedOrder.customer_name}
+                </h3>
+              </div>
+              <button
+                onClick={() => setSelectedOrder(null)}
+                className="text-2xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Order Details */}
+              <div className="space-y-6">
+                <div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">
+                    Order Details
+                  </p>
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-sm text-slate-600 dark:text-slate-400">Product</p>
+                      <p className="text-slate-900 dark:text-white font-medium">{selectedOrder.product_name}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-600 dark:text-slate-400">Quantity</p>
+                      <p className="text-slate-900 dark:text-white font-medium">{selectedOrder.quantity} units</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-600 dark:text-slate-400">Total Amount</p>
+                      <p className="text-2xl font-semibold text-slate-900 dark:text-white">
+                        AED {selectedOrder.total_amount}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">
+                    Customer Info
+                  </p>
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-sm text-slate-600 dark:text-slate-400">Phone</p>
+                      <p className="text-slate-900 dark:text-white font-medium">{selectedOrder.customer_phone}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-600 dark:text-slate-400">Address</p>
+                      <p className="text-slate-900 dark:text-white">{selectedOrder.address}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-600 dark:text-slate-400">Delivery Date</p>
+                      <p className="text-slate-900 dark:text-white">{selectedOrder.delivery_date}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  {selectedOrder.delivery_status === 'pending' && (
+                    <button
+                      onClick={() => markAsDelivered(selectedOrder.id)}
+                      className="flex-1 px-4 py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-medium rounded-lg transition-all"
+                    >
+                      ✓ Mark Delivered
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setSelectedOrder(null)}
+                    className="px-4 py-2 bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-white font-medium rounded-lg hover:bg-slate-300 dark:hover:bg-slate-700 transition"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+
+              {/* Conversation Thread */}
+              <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-4 flex flex-col h-64">
+                <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3 font-semibold">
+                  Conversation
+                </p>
+                <div className="flex-1 overflow-y-auto space-y-2 mb-3">
+                  {conversations.length === 0 ? (
+                    <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-4">
+                      No messages yet
+                    </p>
+                  ) : (
+                    conversations.map((msg, idx) => (
+                      <div
+                        key={idx}
+                        className={`flex ${msg.event_type === 'ADMIN_REPLY' ? 'justify-end' : 'justify-start'}`}
+                      >
+                        <div
+                          className={`max-w-xs px-3 py-2 rounded-lg text-xs ${
+                            msg.event_type === 'ADMIN_REPLY'
+                              ? 'bg-blue-500 text-white rounded-br-none'
+                              : 'bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-bl-none'
+                          }`}
+                        >
+                          {msg.event_data}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+                <button
+                  onClick={() => {
+                    setSelectedOrder(null)
+                    setActiveTab('conversations')
+                  }}
+                  className="w-full px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition"
+                >
+                  💬 Full Chat
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
