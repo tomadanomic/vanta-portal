@@ -7,10 +7,19 @@ import ConversationsTab from '@/components/ConversationsTab'
 import RevenueTab from '@/components/RevenueTab'
 import { useTheme } from '@/app/providers'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL?.trim(),
-  process.env.NEXT_PUBLIC_SUPABASE_KEY?.replace(/\s/g, '')
-)
+export const dynamic = 'force-dynamic'
+
+let supabase = null
+
+function getSupabase() {
+  if (!supabase) {
+    supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL?.trim(),
+      process.env.NEXT_PUBLIC_SUPABASE_KEY?.replace(/\s/g, '')
+    )
+  }
+  return supabase
+}
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState('orders')
@@ -25,7 +34,8 @@ export default function DashboardPage() {
 
   async function loadUnreadCount() {
     try {
-      const { data, error } = await supabase
+      const sb = getSupabase()
+      const { data, error } = await sb
         .from('conversations')
         .select('telegram_user_id')
 

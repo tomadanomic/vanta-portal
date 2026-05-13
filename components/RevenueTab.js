@@ -3,10 +3,17 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@supabase/supabase-js'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL?.trim(),
-  process.env.NEXT_PUBLIC_SUPABASE_KEY?.replace(/\s/g, '')
-)
+let supabase = null
+
+function getSupabase() {
+  if (!supabase) {
+    supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL?.trim(),
+      process.env.NEXT_PUBLIC_SUPABASE_KEY?.replace(/\s/g, '')
+    )
+  }
+  return supabase
+}
 
 export default function RevenueTab() {
   const [orders, setOrders] = useState([])
