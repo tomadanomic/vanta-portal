@@ -14,6 +14,8 @@ export default function OrdersTab({ setActiveTab }) {
   const [filter, setFilter] = useState('all')
   const [selectedOrder, setSelectedOrder] = useState(null)
   const [conversations, setConversations] = useState([])
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
 
   useEffect(() => {
     loadOrders()
@@ -75,9 +77,35 @@ export default function OrdersTab({ setActiveTab }) {
     }
   }
 
-  const filteredOrders = filter === 'all' 
+  async function cancelOrder(orderId) {
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ delivery_status: 'cancelled', status: 'cancelled' })
+        .eq('id', orderId)
+
+      if (error) throw error
+      await loadOrders()
+      if (selectedOrder?.id === orderId) {
+        setSelectedOrder({ ...selectedOrder, delivery_status: 'cancelled' })
+      }
+    } catch (err) {
+      console.error('Error cancelling order:', err)
+    }
+  }
+
+  const filteredOrders = (filter === 'all' 
     ? orders 
-    : orders.filter(o => o.delivery_status === filter)
+    : orders.filter(o => o.delivery_status === filter)).filter(o => {
+      const orderDate = new Date(o.created_at)
+      if (startDate && new Date(startDate) > orderDate) return false
+      if (endDate) {
+        const endOfDay = new Date(endDate)
+        endOfDay.setHours(23, 59, 59, 999)
+        if (endOfDay < orderDate) return false
+      }
+      return true
+    })
 
   const stats = {
     total: orders.length,
@@ -107,6 +135,46 @@ export default function OrdersTab({ setActiveTab }) {
             </p>
           </div>
         ))}
+      </div>
+
+      {/* Date Filters */}
+      <div className="rounded-2xl backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/20 dark:from-white/5 dark:to-white/10 border border-white/50 dark:border-white/10 p-6">
+        <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-4">
+          📅 Filter by Date
+        </p>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div>
+            <label className="block text-xs text-slate-600 dark:text-slate-400 mb-2">From</label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg bg-white/50 dark:bg-slate-900/50 border border-white/30 dark:border-white/10 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-blue-500 transition"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-slate-600 dark:text-slate-400 mb-2">To</label>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg bg-white/50 dark:bg-slate-900/50 border border-white/30 dark:border-white/10 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-blue-500 transition"
+            />
+          </div>
+          {(startDate || endDate) && (
+            <div className="sm:col-span-2 flex items-end">
+              <button
+                onClick={() => {
+                  setStartDate('')
+                  setEndDate('')
+                }}
+                className="w-full px-3 py-2 bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-white text-sm font-medium rounded-lg hover:bg-slate-300 dark:hover:bg-slate-700 transition"
+              >
+                Clear Dates
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Filter Tabs */}
@@ -264,12 +332,20 @@ export default function OrdersTab({ setActiveTab }) {
 
                 <div className="flex gap-2">
                   {selectedOrder.delivery_status === 'pending' && (
-                    <button
-                      onClick={() => markAsDelivered(selectedOrder.id)}
-                      className="flex-1 px-4 py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-medium rounded-lg transition-all"
-                    >
-                      ✓ Mark Delivered
-                    </button>
+                    <>
+                      <button
+                        onClick={() => markAsDelivered(selectedOrder.id)}
+                        className="flex-1 px-4 py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-medium rounded-lg transition-all"
+                      >
+                        ✓ Mark Delivered
+                      </button>
+                      <button
+                        onClick={() => cancelOrder(selectedOrder.id)}
+                        className="flex-1 px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-medium rounded-lg transition-all"
+                      >
+                        ✕ Cancel Order
+                      </button>
+                    </>
                   )}
                   <button
                     onClick={() => setSelectedOrder(null)}

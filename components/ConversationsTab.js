@@ -32,7 +32,6 @@ export default function ConversationsTab() {
 
       if (error) throw error
 
-      // Group by user and track if answered
       const grouped = {}
       const answeredUsers = new Set()
 
@@ -118,14 +117,14 @@ export default function ConversationsTab() {
     : conversations.filter(c => c.isAnswered)
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 min-h-96">
-      {/* Conversations List */}
-      <div className="lg:col-span-1">
-        <div className="mb-4">
-          <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-3">
-            💬 Select a Conversation to Reply
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 min-h-screen lg:min-h-96">
+      {/* Left Panel: Conversations List */}
+      <div className="lg:col-span-1 rounded-2xl backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/20 dark:from-white/5 dark:to-white/10 border border-white/50 dark:border-white/10 p-6 flex flex-col h-fit lg:sticky lg:top-40">
+        <div className="mb-6 pb-6 border-b border-white/20 dark:border-white/10">
+          <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-4">
+            💬 Conversations
           </h3>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             {['all', 'unanswered', 'answered'].map(f => (
               <button
                 key={f}
@@ -142,7 +141,7 @@ export default function ConversationsTab() {
           </div>
         </div>
 
-        <div className="space-y-2 max-h-96 overflow-y-auto">
+        <div className="space-y-2 overflow-y-auto">
           {isLoading ? (
             <div className="text-center py-8 text-slate-500 dark:text-slate-400 text-sm">
               Loading...
@@ -161,22 +160,22 @@ export default function ConversationsTab() {
                 }}
                 className={`w-full text-left p-4 rounded-xl backdrop-blur-xl border transition-all ${
                   selectedUser === conv.userId
-                    ? 'bg-gradient-to-br from-white/50 to-white/30 dark:from-white/10 dark:to-white/5 border-white/70 dark:border-white/20 shadow-lg'
+                    ? 'bg-gradient-to-br from-blue-500/20 to-blue-400/10 dark:from-blue-600/30 dark:to-blue-500/20 border-blue-400/50 dark:border-blue-500/50 ring-2 ring-blue-400/30'
                     : 'bg-gradient-to-br from-white/30 to-white/10 dark:from-white/5 dark:to-white/0 border-white/30 dark:border-white/10 hover:border-white/50 dark:hover:border-white/20'
                 }`}
               >
                 <div className="flex items-start justify-between gap-2 mb-2">
-                  <p className="text-slate-900 dark:text-white font-medium text-sm">
+                  <p className="text-slate-900 dark:text-white font-medium text-sm truncate">
                     ID: {conv.userId}
                   </p>
                   {conv.hasUnanswered && (
-                    <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400 text-xs font-semibold">
+                    <span className="flex-shrink-0 flex items-center gap-1 px-2 py-1 rounded-full bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400 text-xs font-semibold whitespace-nowrap">
                       <span className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></span>
                       New
                     </span>
                   )}
                 </div>
-                <p className="text-sm text-slate-600 dark:text-slate-400 truncate mb-2">
+                <p className="text-sm text-slate-600 dark:text-slate-400 truncate mb-2 line-clamp-2">
                   {conv.lastMessage.event_data}
                 </p>
                 <p className="text-xs text-slate-500 dark:text-slate-500">
@@ -188,58 +187,69 @@ export default function ConversationsTab() {
         </div>
       </div>
 
-      {/* Message Thread */}
+      {/* Right Panel: Message Thread */}
       <div className="lg:col-span-2">
         {selectedUser ? (
           <div className="rounded-2xl backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/20 dark:from-white/5 dark:to-white/10 border border-white/50 dark:border-white/10 h-full flex flex-col overflow-hidden">
-            {/* Header */}
-            <div className="border-b border-white/20 dark:border-white/10 p-6 backdrop-blur-sm">
-              <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">
+            {/* Header with Clear Divider */}
+            <div className="border-b-2 border-slate-200 dark:border-slate-800 p-6 backdrop-blur-sm bg-white/50 dark:bg-slate-900/50">
+              <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2 font-semibold">
                 Customer ID
               </p>
               <p className="text-lg font-semibold text-slate-900 dark:text-white">{selectedUser}</p>
             </div>
 
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-4">
-              {userMessages.map((msg, idx) => (
-                <div
-                  key={idx}
-                  className={`flex ${msg.event_type === 'ADMIN_REPLY' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div
-                    className={`max-w-xs px-4 py-3 rounded-2xl backdrop-blur-sm ${
-                      msg.event_type === 'ADMIN_REPLY'
-                        ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-br-none'
-                        : 'bg-gradient-to-br from-slate-200/50 to-slate-100/50 dark:from-slate-800/50 dark:to-slate-900/50 text-slate-900 dark:text-slate-100 rounded-bl-none border border-white/30 dark:border-white/10'
-                    }`}
-                  >
-                    <p className="text-sm break-words">{msg.event_data}</p>
-                    <p className={`text-xs mt-2 ${
-                      msg.event_type === 'ADMIN_REPLY'
-                        ? 'text-blue-100'
-                        : 'text-slate-500 dark:text-slate-400'
-                    }`}>
-                      {new Date(msg.created_at).toLocaleTimeString([], {
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </p>
-                  </div>
+            {/* Messages with Clear Divider */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gradient-to-b from-transparent to-slate-50/50 dark:to-slate-900/20">
+              {userMessages.length === 0 ? (
+                <div className="flex items-center justify-center h-full text-slate-500 dark:text-slate-400">
+                  No messages yet
                 </div>
-              ))}
+              ) : (
+                userMessages.map((msg, idx) => (
+                  <div
+                    key={idx}
+                    className={`flex ${msg.event_type === 'ADMIN_REPLY' ? 'justify-end' : 'justify-start'}`}
+                  >
+                    <div className="flex flex-col gap-1">
+                      <div
+                        className={`max-w-sm px-4 py-3 rounded-2xl backdrop-blur-sm ${
+                          msg.event_type === 'ADMIN_REPLY'
+                            ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-br-none'
+                            : 'bg-gradient-to-br from-slate-200/70 to-slate-100/70 dark:from-slate-800/70 dark:to-slate-900/70 text-slate-900 dark:text-slate-100 rounded-bl-none border border-white/30 dark:border-white/10'
+                        }`}
+                      >
+                        <p className="text-sm break-words">{msg.event_data}</p>
+                      </div>
+                      <p className={`text-xs px-2 ${
+                        msg.event_type === 'ADMIN_REPLY'
+                          ? 'text-blue-600 dark:text-blue-400 text-right'
+                          : 'text-slate-500 dark:text-slate-400 text-left'
+                      }`}>
+                        {new Date(msg.created_at).toLocaleTimeString([], {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
 
-            {/* Reply Input */}
-            <div className="border-t border-white/20 dark:border-white/10 p-6 backdrop-blur-sm">
-              <div className="flex gap-2">
+            {/* Reply Input with Clear Divider */}
+            <div className="border-t-2 border-slate-200 dark:border-slate-800 p-6 backdrop-blur-sm bg-white/50 dark:bg-slate-900/50">
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-3">
+                Reply as Matt
+              </label>
+              <div className="flex gap-3">
                 <input
                   type="text"
                   value={replyText}
                   onChange={(e) => setReplyText(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && sendReply()}
-                  placeholder="Reply as Matt..."
-                  className="flex-1 px-4 py-3 rounded-xl bg-white/50 dark:bg-slate-900/50 border border-white/30 dark:border-white/10 text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 focus:outline-none focus:border-white/50 dark:focus:border-white/20 transition backdrop-blur-sm"
+                  placeholder="Type your message..."
+                  className="flex-1 px-4 py-3 rounded-xl bg-white/60 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 focus:outline-none focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 transition backdrop-blur-sm"
                 />
                 <button
                   onClick={sendReply}
@@ -253,9 +263,12 @@ export default function ConversationsTab() {
           </div>
         ) : (
           <div className="rounded-2xl backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/20 dark:from-white/5 dark:to-white/10 border border-white/50 dark:border-white/10 h-full flex items-center justify-center">
-            <p className="text-slate-500 dark:text-slate-400">
-              Select a conversation to reply
-            </p>
+            <div className="text-center">
+              <p className="text-3xl mb-2">💬</p>
+              <p className="text-slate-500 dark:text-slate-400">
+                Select a conversation from the left to start replying
+              </p>
+            </div>
           </div>
         )}
       </div>
