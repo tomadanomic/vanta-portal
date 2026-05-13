@@ -16,15 +16,10 @@ export default function ConversationsTab() {
   useEffect(() => {
     loadConversations()
     
-    const subscription = supabase
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'conversations' },
-        () => loadConversations()
-      )
-      .subscribe()
+    // Refresh every 5 seconds instead of real-time
+    const interval = setInterval(loadConversations, 5000)
 
-    return () => subscription.unsubscribe()
+    return () => clearInterval(interval)
   }, [])
 
   async function loadConversations() {

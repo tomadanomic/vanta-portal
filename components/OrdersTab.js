@@ -16,18 +16,10 @@ export default function OrdersTab() {
   useEffect(() => {
     loadOrders()
     
-    // Subscribe to real-time changes
-    const subscription = supabase
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'orders' },
-        (payload) => {
-          loadOrders()
-        }
-      )
-      .subscribe()
-
-    return () => subscription.unsubscribe()
+    // Refresh orders every 5 seconds instead of real-time
+    const interval = setInterval(loadOrders, 5000)
+    
+    return () => clearInterval(interval)
   }, [])
 
   async function loadOrders() {
