@@ -15,6 +15,26 @@ function getSupabase() {
   return supabase
 }
 
+// Product catalog (must match bot's PRODUCTS array)
+const PRODUCTS = [
+  { id: 1, name: 'Retatrutide Pen 30mg', price: 1500 },
+  { id: 2, name: 'NAD+ 500mg', price: 800 },
+  { id: 3, name: 'Tesamorelin 5mg', price: 300 },
+  { id: 4, name: 'Melanotan 2 10mg', price: 300 },
+  { id: 5, name: 'HCG 5000IU', price: 400 },
+  { id: 6, name: 'MOTSC 5mg', price: 175 },
+  { id: 7, name: 'BPC157 5mg', price: 150 },
+  { id: 8, name: 'TB500 5mg', price: 100 },
+  { id: 9, name: 'GHKCU 50mg', price: 250 }
+]
+
+// Helper: calculate total price from product_name and quantity
+function calculateOrderTotal(productName, quantity) {
+  const product = PRODUCTS.find(p => p.name === productName)
+  if (!product) return 0
+  return product.price * (quantity || 1)
+}
+
 export default function RevenueTab() {
   const [orders, setOrders] = useState([])
   const [isLoading, setIsLoading] = useState(true)
@@ -57,11 +77,11 @@ export default function RevenueTab() {
 
   const collectedRevenue = filteredOrders
     .filter(o => o.status === 'delivered')
-    .reduce((sum, o) => sum + (parseFloat(o.total_price) || 0), 0)
+    .reduce((sum, o) => sum + calculateOrderTotal(o.product_name, o.quantity), 0)
 
   const pendingRevenue = filteredOrders
     .filter(o => o.status === 'pending' || o.status === 'in_transit')
-    .reduce((sum, o) => sum + (parseFloat(o.total_price) || 0), 0)
+    .reduce((sum, o) => sum + calculateOrderTotal(o.product_name, o.quantity), 0)
 
   const totalRevenue = collectedRevenue + pendingRevenue
 
@@ -174,7 +194,7 @@ export default function RevenueTab() {
 
                     <div className="flex items-center gap-4">
                       <p className="text-[#137333] font-600 text-sm min-w-[80px] text-right">
-                        ${parseFloat(order.total_price).toFixed(2)}
+                        ${calculateOrderTotal(order.product_name, order.quantity).toFixed(2)} AED
                       </p>
                       <div
                         className="px-3 py-1.5 rounded-[10px] text-xs font-600 whitespace-nowrap"

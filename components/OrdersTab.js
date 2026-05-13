@@ -15,6 +15,26 @@ function getSupabase() {
   return supabase
 }
 
+// Product catalog (must match bot's PRODUCTS array)
+const PRODUCTS = [
+  { id: 1, name: 'Retatrutide Pen 30mg', price: 1500 },
+  { id: 2, name: 'NAD+ 500mg', price: 800 },
+  { id: 3, name: 'Tesamorelin 5mg', price: 300 },
+  { id: 4, name: 'Melanotan 2 10mg', price: 300 },
+  { id: 5, name: 'HCG 5000IU', price: 400 },
+  { id: 6, name: 'MOTSC 5mg', price: 175 },
+  { id: 7, name: 'BPC157 5mg', price: 150 },
+  { id: 8, name: 'TB500 5mg', price: 100 },
+  { id: 9, name: 'GHKCU 50mg', price: 250 }
+]
+
+// Helper: calculate total price from product_name and quantity
+function calculateOrderTotal(productName, quantity) {
+  const product = PRODUCTS.find(p => p.name === productName)
+  if (!product) return 0
+  return product.price * (quantity || 1)
+}
+
 const STATUS_COLORS = {
   pending: { bg: '#FEF7E0', text: '#B06000', label: 'Pending' },
   in_transit: { bg: '#E8F5FF', text: '#0066CC', label: 'In Transit' },
@@ -129,9 +149,9 @@ export default function OrdersTab({ setActiveTab }) {
     delivered: orders.filter(o => o.status === 'delivered').length
   }
 
-  const totalRevenue = orders
+  const deliveredRevenue = orders
     .filter(o => o.status === 'delivered')
-    .reduce((sum, o) => sum + (parseFloat(o.total_price) || 0), 0)
+    .reduce((sum, o) => sum + calculateOrderTotal(o.product_name, o.quantity), 0)
 
   return (
     <div className="space-y-6">
@@ -251,9 +271,9 @@ export default function OrdersTab({ setActiveTab }) {
                   </div>
 
                   <div className="flex items-center gap-4">
-                    <p className="text-[#137333] font-600 text-sm min-w-[80px] text-right">
-                      ${parseFloat(order.total_price).toFixed(2)}
-                    </p>
+                      <p className="text-[#137333] font-600 text-sm min-w-[80px] text-right">
+                        ${calculateOrderTotal(order.product_name, order.quantity).toFixed(2)} AED
+                      </p>
                     <div
                       className="px-3 py-1.5 rounded-[10px] text-xs font-600 whitespace-nowrap"
                       style={{
@@ -303,10 +323,12 @@ export default function OrdersTab({ setActiveTab }) {
                     <p className="text-[#545458]">Products</p>
                     <p className="text-[#0A0A0A] font-500">{selectedOrder.products?.join(', ')}</p>
                   </div>
-                  <div className="flex justify-between">
-                    <p className="text-[#545458]">Total</p>
-                    <p className="text-[#137333] font-600">${parseFloat(selectedOrder.total_price).toFixed(2)}</p>
-                  </div>
+                    <div className="flex justify-between">
+                      <p className="text-[#545458]">Total</p>
+                      <p className="text-[#137333] font-600">
+                        ${calculateOrderTotal(selectedOrder.product_name, selectedOrder.quantity).toFixed(2)} AED
+                      </p>
+                    </div>
                   <div className="flex justify-between">
                     <p className="text-[#545458]">Status</p>
                     <div

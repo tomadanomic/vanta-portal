@@ -193,7 +193,7 @@ export default function ConversationsTab() {
                   )}
                 </div>
                 <p className="text-[#545458] text-xs truncate mb-1 line-clamp-1">
-                  {conv.lastMessage?.message || '(empty)'}
+                  {conv.lastMessage?.event_data || conv.lastMessage?.message || '(no text)'}
                 </p>
                 <div className="flex items-center justify-between">
                   <p className="text-[#8A8A8E] text-xs">
@@ -256,7 +256,7 @@ export default function ConversationsTab() {
                               : 'bg-white text-[#0A0A0A] border border-[#ECECEC] rounded-bl-none'
                           }`}
                         >
-                          {msg.message}
+                          {msg.event_data || msg.message || '(empty message)'}
                         </div>
                         <p className={`text-xs px-2 ${
                           isAdmin
