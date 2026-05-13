@@ -32,7 +32,8 @@ export default function ConversationsTab() {
 
   async function loadConversations() {
     try {
-      const { data, error } = await supabase
+      const sb = getSupabase()
+      const { data, error } = await sb
         .from('conversations')
         .select('*')
         .order('created_at', { ascending: false })
@@ -59,8 +60,12 @@ export default function ConversationsTab() {
             const hasUnanswered = msgs.some(
               m => m.event_type === 'CUSTOMER_QUESTION' && !answeredUsers.has(userId)
             )
+            // Extract customer name if available
+            const customerName = msgs.find(m => m.customer_name)?.customer_name || `User ${userId.slice(-8)}`
+            
             return {
               userId,
+              customerName,
               lastMessage,
               messageCount: msgs.length,
               hasUnanswered,
@@ -78,7 +83,8 @@ export default function ConversationsTab() {
 
   async function loadUserMessages(userId) {
     try {
-      const { data, error } = await supabase
+      const sb = getSupabase()
+      const { data, error } = await sb
         .from('conversations')
         .select('*')
         .eq('telegram_user_id', userId)
@@ -100,16 +106,16 @@ export default function ConversationsTab() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: selectedUser,
+          telegram_user_id: selectedUser,
           message: replyText
         })
       })
 
-      if (response.ok) {
-        setReplyText('')
-        await loadUserMessages(selectedUser)
-        await loadConversations()
-      }
+      if (!response.ok) throw new Error('Failed to send reply')
+      
+      setReplyText('')
+      await loadConversations()
+      await loadUserMessages(selectedUser)
     } catch (err) {
       console.error('Error sending reply:', err)
     } finally {
@@ -117,45 +123,50 @@ export default function ConversationsTab() {
     }
   }
 
-  const filteredConversations = filter === 'all' 
-    ? conversations 
-    : filter === 'unanswered'
-    ? conversations.filter(c => c.hasUnanswered)
-    : conversations.filter(c => c.isAnswered)
+  const filteredConversations =
+    filter === 'unanswered'
+      ? conversations.filter(c => c.hasUnanswered)
+      : filter === 'answered'
+      ? conversations.filter(c => c.isAnswered)
+      : conversations
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 min-h-screen lg:min-h-96 w-full overflow-x-hidden">
-      {/* Left Panel: Conversations List - Mobile Optimized */}
-      <div className="lg:col-span-1 rounded-lg sm:rounded-2xl backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/20 dark:from-white/5 dark:to-white/10 border border-white/50 dark:border-white/10 p-3 sm:p-6 h-fit lg:sticky lg:top-40">
-        <div className="mb-4 sm:mb-6 pb-4 sm:pb-6 border-b border-white/20 dark:border-white/10">
-          <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-3">
-            💬 Chats
-          </h3>
-          <div className="flex gap-1 sm:gap-2 flex-wrap">
-            {['all', 'unanswered', 'answered'].map(f => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={`px-2 sm:px-3 py-1 rounded-lg text-xs font-medium transition whitespace-nowrap ${
-                  filter === f
-                    ? 'bg-slate-900 dark:bg-white text-white dark:text-black'
-                    : 'bg-slate-100/50 dark:bg-slate-900/50 text-slate-600 dark:text-slate-400'
-                }`}
-              >
-                {f === 'all' ? 'All' : f === 'unanswered' ? '🔴 New' : '✅ Done'}
-              </button>
-            ))}
-          </div>
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-180px)]">
+      {/* Left: Conversation List */}
+      <div className="lg:col-span-1 bg-white border border-[#ECECEC] rounded-[14px] flex flex-col shadow-[0_1px_2px_rgba(0,0,0,0.04),0_1px_6px_rgba(0,0,0,0.04)]">
+        {/* List Header */}
+        <div className="p-4 border-b border-[#ECECEC]">
+          <h3 className="text-[#0A0A0A] font-600 text-sm">Conversations</h3>
+          <p className="text-[#8A8A8E] text-xs mt-1">{filteredConversations.length} total</p>
         </div>
 
-        <div className="space-y-2 max-h-96 lg:max-h-none overflow-y-auto">
+        {/* Filter Pills */}
+        <div className="px-4 pt-3 pb-2 flex gap-2">
+          {['all', 'unanswered', 'answered'].map(f => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`px-3 py-1.5 rounded-[10px] text-xs font-500 transition-all ${
+                filter === f
+                  ? 'bg-[#0F1729] text-white'
+                  : 'bg-transparent text-[#545458] hover:bg-[#FAFAF7] border border-[#ECECEC]'
+              }`}
+            >
+              {f === 'all' ? 'All' : f === 'unanswered' ? 'Unanswered' : 'Answered'}
+            </button>
+          ))}
+        </div>
+
+        {/* Messages List */}
+        <div className="flex-1 overflow-y-auto">
           {isLoading ? (
-            <div className="text-center py-8 text-slate-500 dark:text-slate-400 text-xs">
-              Loading...
+            <div className="flex items-center justify-center h-full text-[#8A8A8E] text-xs">
+              Loading conversations...
             </div>
           ) : filteredConversations.length === 0 ? (
-            <div className="text-center py-8 text-slate-500 dark:text-slate-400 text-xs">
-              No chats
+            <div className="flex flex-col items-center justify-center h-full text-center p-4">
+              <p className="text-[#545458] text-xs mb-2">No conversations yet</p>
+              <p className="text-[#8A8A8E] text-xs">Once customers message the bot, they'll appear here</p>
             </div>
           ) : (
             filteredConversations.map(conv => (
@@ -165,118 +176,131 @@ export default function ConversationsTab() {
                   setSelectedUser(conv.userId)
                   loadUserMessages(conv.userId)
                 }}
-                className={`w-full text-left p-3 rounded-lg backdrop-blur-xl border transition-all text-xs sm:text-sm ${
+                className={`w-full text-left px-4 py-3 border-b border-[#ECECEC] transition-colors ${
                   selectedUser === conv.userId
-                    ? 'bg-gradient-to-br from-blue-500/20 to-blue-400/10 dark:from-blue-600/30 dark:to-blue-500/20 border-blue-400/50 dark:border-blue-500/50 ring-2 ring-blue-400/30'
-                    : 'bg-gradient-to-br from-white/30 to-white/10 dark:from-white/5 dark:to-white/0 border-white/30 dark:border-white/10 hover:border-white/50 dark:hover:border-white/20'
+                    ? 'bg-[#F5F5F5] border-l-3 border-l-[#0F1729]'
+                    : 'hover:bg-[#FAFAF7]'
                 }`}
               >
                 <div className="flex items-start justify-between gap-2 mb-2">
-                  <p className="text-slate-900 dark:text-white font-medium truncate">
-                    {conv.userId}
-                  </p>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[#0A0A0A] font-600 text-sm truncate">
+                      {conv.customerName}
+                    </p>
+                  </div>
                   {conv.hasUnanswered && (
-                    <span className="flex-shrink-0 flex items-center gap-1 px-2 py-0.5 rounded-full bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400 text-xs font-semibold whitespace-nowrap">
-                      <span className="w-1.5 h-1.5 bg-orange-500 rounded-full animate-pulse"></span>
-                      New
-                    </span>
+                    <span className="flex-shrink-0 w-2 h-2 rounded-full bg-[#B06000] mt-1.5"></span>
                   )}
                 </div>
-                <p className="text-slate-600 dark:text-slate-400 truncate mb-1 line-clamp-1 text-xs">
-                  {conv.lastMessage.event_data}
+                <p className="text-[#545458] text-xs truncate mb-1 line-clamp-1">
+                  {conv.lastMessage?.message || '(empty)'}
                 </p>
-                <p className="text-xs text-slate-500 dark:text-slate-500">
-                  {conv.messageCount} msg{conv.messageCount !== 1 ? 's' : ''}
-                </p>
+                <div className="flex items-center justify-between">
+                  <p className="text-[#8A8A8E] text-xs">
+                    {conv.messageCount} message{conv.messageCount !== 1 ? 's' : ''}
+                  </p>
+                  <p className="text-[#8A8A8E] text-xs">
+                    {new Date(conv.lastMessage?.created_at).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </p>
+                </div>
               </button>
             ))
           )}
         </div>
       </div>
 
-      {/* Right Panel: Message Thread - Mobile Full Width Below */}
+      {/* Right: Message Thread */}
       <div className="lg:col-span-2">
         {selectedUser ? (
-          <div className="rounded-lg sm:rounded-2xl backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/20 dark:from-white/5 dark:to-white/10 border border-white/50 dark:border-white/10 h-full flex flex-col overflow-hidden">
+          <div className="bg-white border border-[#ECECEC] rounded-[14px] h-full flex flex-col shadow-[0_1px_2px_rgba(0,0,0,0.04),0_1px_6px_rgba(0,0,0,0.04)]">
             {/* Header */}
-            <div className="border-b-2 border-slate-200 dark:border-slate-800 p-3 sm:p-6 backdrop-blur-sm bg-white/50 dark:bg-slate-900/50">
-              <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1 font-semibold">
+            <div className="p-4 border-b border-[#ECECEC]">
+              <p className="text-[#8A8A8E] text-xs uppercase tracking-widest font-600 mb-1">
                 Chat with
               </p>
-              <p className="text-base sm:text-lg font-semibold text-slate-900 dark:text-white break-all">
-                {selectedUser}
+              <p className="text-[#0A0A0A] font-600 text-base break-all">
+                {conversations.find(c => c.userId === selectedUser)?.customerName || selectedUser}
+              </p>
+              <p className="text-[#8A8A8E] text-xs mt-1">
+                {userMessages.length} message{userMessages.length !== 1 ? 's' : ''}
               </p>
             </div>
 
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-3 bg-gradient-to-b from-transparent to-slate-50/50 dark:to-slate-900/20">
+            {/* Messages Thread */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#FAFAF7]">
               {userMessages.length === 0 ? (
-                <div className="flex items-center justify-center h-full text-slate-500 dark:text-slate-400 text-sm">
-                  No messages yet
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center">
+                    <p className="text-[#545458] text-sm">No messages in this conversation</p>
+                    <p className="text-[#8A8A8E] text-xs mt-1">Messages will appear as the customer responds</p>
+                  </div>
                 </div>
               ) : (
-                userMessages.map((msg, idx) => (
-                  <div
-                    key={idx}
-                    className={`flex ${msg.event_type === 'ADMIN_REPLY' ? 'justify-end' : 'justify-start'}`}
-                  >
-                    <div className="flex flex-col gap-1">
-                      <div
-                        className={`max-w-xs px-3 py-2 rounded-xl backdrop-blur-sm text-xs sm:text-sm ${
-                          msg.event_type === 'ADMIN_REPLY'
-                            ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-br-none'
-                            : 'bg-gradient-to-br from-slate-200/70 to-slate-100/70 dark:from-slate-800/70 dark:to-slate-900/70 text-slate-900 dark:text-slate-100 rounded-bl-none border border-white/30 dark:border-white/10'
-                        }`}
-                      >
-                        <p className="break-words">{msg.event_data}</p>
+                userMessages.map((msg, idx) => {
+                  const isAdmin = msg.event_type === 'ADMIN_REPLY'
+                  return (
+                    <div
+                      key={idx}
+                      className={`flex ${isAdmin ? 'justify-end' : 'justify-start'}`}
+                    >
+                      <div className="flex flex-col gap-1 max-w-xs">
+                        <div
+                          className={`px-4 py-3 rounded-[14px] break-words text-sm ${
+                            isAdmin
+                              ? 'bg-[#0F1729] text-white rounded-br-none shadow-[0_1px_2px_rgba(0,0,0,0.04),0_1px_6px_rgba(0,0,0,0.04)]'
+                              : 'bg-white text-[#0A0A0A] border border-[#ECECEC] rounded-bl-none'
+                          }`}
+                        >
+                          {msg.message}
+                        </div>
+                        <p className={`text-xs px-2 ${
+                          isAdmin
+                            ? 'text-[#0F1729] text-right'
+                            : 'text-[#8A8A8E] text-left'
+                        }`}>
+                          {new Date(msg.created_at).toLocaleTimeString([], {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit'
+                          })}
+                        </p>
                       </div>
-                      <p className={`text-xs px-2 ${
-                        msg.event_type === 'ADMIN_REPLY'
-                          ? 'text-blue-600 dark:text-blue-400 text-right'
-                          : 'text-slate-500 dark:text-slate-400 text-left'
-                      }`}>
-                        {new Date(msg.created_at).toLocaleTimeString([], {
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </p>
                     </div>
-                  </div>
-                ))
+                  )
+                })
               )}
             </div>
 
-            {/* Reply Input */}
-            <div className="border-t-2 border-slate-200 dark:border-slate-800 p-3 sm:p-6 backdrop-blur-sm bg-white/50 dark:bg-slate-900/50">
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-2 sm:mb-3">
-                Reply
-              </label>
-              <div className="flex gap-2 sm:gap-3">
-                <input
-                  type="text"
+            {/* Reply Composer */}
+            <div className="p-4 border-t border-[#ECECEC] bg-white">
+              <div className="flex gap-3">
+                <textarea
                   value={replyText}
                   onChange={(e) => setReplyText(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && sendReply()}
-                  placeholder="Type message..."
-                  className="flex-1 px-3 py-2 text-xs sm:text-sm rounded-lg bg-white/60 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 focus:outline-none focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 transition backdrop-blur-sm"
+                  placeholder="Type your reply..."
+                  className="flex-1 px-4 py-2 text-sm rounded-[10px] border border-[#ECECEC] bg-white text-[#0A0A0A] placeholder:text-[#8A8A8E] focus:outline-none focus:border-[#0F1729] focus:ring-1 focus:ring-[#0F1729]/20 resize-none"
+                  rows="3"
                 />
-                <button
-                  onClick={sendReply}
-                  disabled={!replyText.trim() || sending}
-                  className="px-3 sm:px-6 py-2 text-xs sm:text-sm bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 disabled:from-slate-400 disabled:to-slate-500 text-white font-medium rounded-lg transition-all disabled:opacity-50 flex-shrink-0"
-                >
-                  Send
-                </button>
               </div>
+              <button
+                onClick={sendReply}
+                disabled={!replyText.trim() || sending}
+                className="w-full mt-3 px-4 py-2 rounded-[10px] bg-[#0F1729] text-white text-sm font-600 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
+              >
+                {sending ? 'Sending...' : 'Send Reply'}
+              </button>
             </div>
           </div>
         ) : (
-          <div className="rounded-lg sm:rounded-2xl backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/20 dark:from-white/5 dark:to-white/10 border border-white/50 dark:border-white/10 h-full hidden lg:flex items-center justify-center">
+          <div className="bg-white border border-[#ECECEC] rounded-[14px] h-full flex items-center justify-center shadow-[0_1px_2px_rgba(0,0,0,0.04),0_1px_6px_rgba(0,0,0,0.04)]">
             <div className="text-center">
-              <p className="text-3xl mb-2">💬</p>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                Select a chat to start
-              </p>
+              <p className="text-[#545458] text-sm">Select a conversation to view messages</p>
+              <p className="text-[#8A8A8E] text-xs mt-1">Choose a customer from the list</p>
             </div>
           </div>
         )}

@@ -20,6 +20,7 @@ export default function RevenueTab() {
   const [isLoading, setIsLoading] = useState(true)
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
+  const [dateOpen, setDateOpen] = useState(false)
 
   useEffect(() => {
     loadOrders()
@@ -29,7 +30,8 @@ export default function RevenueTab() {
 
   async function loadOrders() {
     try {
-      const { data, error } = await supabase
+      const sb = getSupabase()
+      const { data, error } = await sb
         .from('orders')
         .select('*')
         .order('created_at', { ascending: false })
@@ -43,152 +45,164 @@ export default function RevenueTab() {
     }
   }
 
-  const delivered = orders.filter(o => o.delivery_status === 'delivered')
-  const pending = orders.filter(o => o.delivery_status === 'pending')
+  const filteredOrders = orders.filter(order => {
+    const orderDate = new Date(order.created_at)
+    const start = startDate ? new Date(startDate) : null
+    const end = endDate ? new Date(endDate) : null
 
-  const filteredOrders = orders.filter(o => {
-    const orderDate = new Date(o.created_at)
-    if (startDate && new Date(startDate) > orderDate) return false
-    if (endDate) {
-      const endOfDay = new Date(endDate)
-      endOfDay.setHours(23, 59, 59, 999)
-      if (endOfDay < orderDate) return false
-    }
+    if (start && orderDate < start) return false
+    if (end && orderDate > end) return false
     return true
   })
 
-  const filteredDelivered = filteredOrders.filter(o => o.delivery_status === 'delivered')
-  const filteredPending = filteredOrders.filter(o => o.delivery_status === 'pending')
+  const collectedRevenue = filteredOrders
+    .filter(o => o.status === 'delivered')
+    .reduce((sum, o) => sum + (parseFloat(o.total_price) || 0), 0)
 
-  const stats = {
-    totalRevenue: filteredOrders.reduce((sum, o) => sum + (o.total_amount || 0), 0),
-    collectedCash: filteredDelivered.reduce((sum, o) => sum + (o.total_amount || 0), 0),
-    pendingCash: filteredPending.reduce((sum, o) => sum + (o.total_amount || 0), 0),
-    avgOrderValue: filteredOrders.length > 0 ? Math.round(filteredOrders.reduce((sum, o) => sum + (o.total_amount || 0), 0) / filteredOrders.length) : 0,
-    totalOrders: filteredOrders.length
-  }
+  const pendingRevenue = filteredOrders
+    .filter(o => o.status === 'pending' || o.status === 'in_transit')
+    .reduce((sum, o) => sum + (parseFloat(o.total_price) || 0), 0)
+
+  const totalRevenue = collectedRevenue + pendingRevenue
 
   return (
-    <div className="space-y-4 sm:space-y-8 w-full overflow-x-hidden">
-      {/* Date Filters - Mobile Optimized */}
-      <div className="rounded-lg sm:rounded-2xl backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/20 dark:from-white/5 dark:to-white/10 border border-white/50 dark:border-white/10 p-3 sm:p-6">
-        <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-3">
-          📅 Date
-        </p>
-        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-          <input
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            className="flex-1 px-3 py-2 text-sm rounded-lg bg-white/50 dark:bg-slate-900/50 border border-white/30 dark:border-white/10 text-slate-900 dark:text-white focus:outline-none focus:border-blue-500 transition"
-          />
-          <input
-            type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            className="flex-1 px-3 py-2 text-sm rounded-lg bg-white/50 dark:bg-slate-900/50 border border-white/30 dark:border-white/10 text-slate-900 dark:text-white focus:outline-none focus:border-blue-500 transition"
-          />
-          {(startDate || endDate) && (
-            <button
-              onClick={() => {
-                setStartDate('')
-                setEndDate('')
-              }}
-              className="px-3 py-2 text-sm bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-white font-medium rounded-lg hover:bg-slate-300 dark:hover:bg-slate-700 transition"
-            >
-              Clear
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Main Stats - Mobile Responsive */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-6">
+    <div className="space-y-6">
+      {/* Revenue Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
         {[
-          { label: 'Total', value: `AED ${stats.totalRevenue}`, color: 'from-slate-500 to-slate-600' },
-          { label: 'Collected', value: `AED ${stats.collectedCash}`, color: 'from-emerald-500 to-emerald-600' },
-          { label: 'Pending', value: `AED ${stats.pendingCash}`, color: 'from-amber-500 to-amber-600' },
-          { label: 'Orders', value: stats.totalOrders, color: 'from-blue-500 to-blue-600' },
-          { label: 'Avg', value: `AED ${stats.avgOrderValue}`, color: 'from-purple-500 to-purple-600' }
+          { label: 'Total Revenue', value: totalRevenue, color: 'text-[#0A0A0A]', bg: 'bg-white' },
+          { label: 'Collected', value: collectedRevenue, color: 'text-[#137333]', bg: 'bg-[#E8F7EC]' },
+          { label: 'Pending', value: pendingRevenue, color: 'text-[#B06000]', bg: 'bg-[#FEF7E0]' }
         ].map((stat, idx) => (
-          <div
-            key={idx}
-            className="rounded-lg sm:rounded-2xl backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/20 dark:from-white/5 dark:to-white/10 border border-white/50 dark:border-white/10 p-3 sm:p-6 overflow-hidden"
-          >
-            <div className={`absolute inset-0 bg-gradient-to-br ${stat.color} opacity-5`}></div>
-            <p className="text-xs text-slate-600 dark:text-slate-400 font-medium mb-1 sm:mb-2 relative z-10 truncate">
+          <div key={idx} className={`${stat.bg} border border-[#ECECEC] rounded-[14px] p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_1px_6px_rgba(0,0,0,0.04)]`}>
+            <p className="text-[#8A8A8E] text-xs uppercase tracking-widest font-600 mb-2">
               {stat.label}
             </p>
-            <p className="text-sm sm:text-2xl font-semibold text-slate-900 dark:text-white relative z-10 break-words">
-              {stat.value}
+            <p className={`${stat.color} text-3xl font-700`}>
+              ${stat.value.toFixed(2)}
             </p>
           </div>
         ))}
       </div>
 
-      {/* Revenue by Product - Mobile Friendly */}
-      <div>
-        <h3 className="text-base sm:text-lg font-semibold text-slate-900 dark:text-white mb-3 sm:mb-4">
-          Revenue by Product
-        </h3>
-        <div className="space-y-2 sm:space-y-3">
-          {Object.entries(
-            filteredOrders.reduce((acc, order) => {
-              const product = order.product_name
-              acc[product] = (acc[product] || 0) + (order.total_amount || 0)
-              return acc
-            }, {})
-          )
-            .sort(([, a], [, b]) => b - a)
-            .map(([product, revenue]) => (
-              <div
-                key={product}
-                className="rounded-lg sm:rounded-2xl backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/20 dark:from-white/5 dark:to-white/10 border border-white/50 dark:border-white/10 p-3 sm:p-4 hover:border-white/70 dark:hover:border-white/20 transition"
-              >
-                <div className="flex justify-between items-start gap-2 mb-2">
-                  <p className="text-slate-900 dark:text-white font-medium text-xs sm:text-sm break-words flex-1">
-                    {product}
-                  </p>
-                  <p className="text-emerald-600 dark:text-emerald-400 font-semibold text-xs sm:text-sm flex-shrink-0">
-                    AED {revenue}
-                  </p>
+      {/* Date Range Filter */}
+      <div className="bg-white border border-[#ECECEC] rounded-[14px] p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_1px_6px_rgba(0,0,0,0.04)]">
+        <div className="relative w-full sm:w-auto">
+          <button
+            onClick={() => setDateOpen(!dateOpen)}
+            className="px-4 py-2 rounded-[10px] border border-[#ECECEC] bg-white text-[#0A0A0A] text-xs font-500 hover:bg-[#FAFAF7] transition-colors"
+          >
+            {startDate && endDate
+              ? `${new Date(startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${new Date(endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })}`
+              : 'Select dates'}
+          </button>
+          {dateOpen && (
+            <div className="absolute left-0 mt-2 bg-white border border-[#ECECEC] rounded-[14px] p-4 shadow-lg z-50 min-w-xs">
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs text-[#8A8A8E] font-600 mb-1 block">Start Date</label>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="w-full px-3 py-2 rounded-[10px] border border-[#ECECEC] text-xs"
+                  />
                 </div>
-                <div className="h-2 bg-slate-200/50 dark:bg-slate-800/50 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-emerald-500 to-emerald-600"
-                    style={{ width: `${stats.totalRevenue > 0 ? (revenue / stats.totalRevenue) * 100 : 0}%` }}
-                  ></div>
+                <div>
+                  <label className="text-xs text-[#8A8A8E] font-600 mb-1 block">End Date</label>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="w-full px-3 py-2 rounded-[10px] border border-[#ECECEC] text-xs"
+                  />
                 </div>
+                <button
+                  onClick={() => setDateOpen(false)}
+                  className="w-full px-3 py-1.5 rounded-[10px] bg-[#0F1729] text-white text-xs font-600"
+                >
+                  Apply
+                </button>
               </div>
-            ))}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Recent Collections - Mobile Optimized */}
-      <div>
-        <h3 className="text-base sm:text-lg font-semibold text-slate-900 dark:text-white mb-3 sm:mb-4">
-          Recent Collections
-        </h3>
-        <div className="space-y-2">
-          {filteredDelivered.slice(0, 10).map(order => (
-            <div
-              key={order.id}
-              className="flex justify-between items-start gap-2 p-3 sm:p-4 rounded-lg sm:rounded-xl backdrop-blur-xl bg-gradient-to-br from-white/30 to-white/10 dark:from-white/5 dark:to-white/0 border border-white/30 dark:border-white/10 hover:border-white/50 dark:hover:border-white/20 transition"
-            >
-              <div className="min-w-0 flex-1">
-                <p className="text-slate-900 dark:text-white font-medium text-xs sm:text-sm truncate">
-                  {order.customer_name}
-                </p>
-                <p className="text-xs text-slate-600 dark:text-slate-400 truncate">
-                  {order.product_name}
-                </p>
-              </div>
-              <p className="text-emerald-600 dark:text-emerald-400 font-semibold text-xs sm:text-sm flex-shrink-0">
-                AED {order.total_amount}
-              </p>
-            </div>
-          ))}
+      {/* Revenue Breakdown */}
+      <div className="bg-white border border-[#ECECEC] rounded-[14px] overflow-hidden shadow-[0_1px_2px_rgba(0,0,0,0.04),0_1px_6px_rgba(0,0,0,0.04)]">
+        <div className="p-6 border-b border-[#ECECEC]">
+          <h3 className="text-[#0A0A0A] font-600 text-base">Revenue by Order</h3>
         </div>
+
+        {isLoading ? (
+          <div className="flex items-center justify-center h-40">
+            <p className="text-[#8A8A8E] text-xs">Loading revenue data...</p>
+          </div>
+        ) : filteredOrders.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-40 p-4">
+            <p className="text-[#545458] text-sm font-500">No orders in this period</p>
+            <p className="text-[#8A8A8E] text-xs mt-1">Select different dates to view revenue</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-[#ECECEC]">
+            {filteredOrders.map(order => {
+              const statusColor =
+                order.status === 'delivered'
+                  ? { bg: '#E8F7EC', text: '#137333' }
+                  : order.status === 'pending' || order.status === 'in_transit'
+                  ? { bg: '#FEF7E0', text: '#B06000' }
+                  : { bg: '#FFECE9', text: '#B3261E' }
+
+              return (
+                <div key={order.id} className="p-4 hover:bg-[#FAFAF7] transition-colors">
+                  <div className="flex items-center justify-between gap-4 flex-wrap">
+                    <div className="flex-1 min-w-[200px]">
+                      <p className="font-mono text-xs text-[#8A8A8E] mb-1">
+                        Order #{order.id.slice(0, 8)}
+                      </p>
+                      <p className="text-[#0A0A0A] font-600 text-sm">
+                        {order.customer_name}
+                      </p>
+                    </div>
+
+                    <div className="flex-1 min-w-[150px]">
+                      <p className="text-[#545458] text-sm line-clamp-1">
+                        {order.products?.join(', ') || 'N/A'}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                      <p className="text-[#137333] font-600 text-sm min-w-[80px] text-right">
+                        ${parseFloat(order.total_price).toFixed(2)}
+                      </p>
+                      <div
+                        className="px-3 py-1.5 rounded-[10px] text-xs font-600 whitespace-nowrap"
+                        style={{
+                          backgroundColor: statusColor.bg,
+                          color: statusColor.text
+                        }}
+                      >
+                        {order.status === 'delivered' ? 'Collected' : order.status === 'pending' || order.status === 'in_transit' ? 'Pending' : 'Cancelled'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Summary */}
+      <div className="bg-gradient-to-r from-[#0F1729] to-[#1A2545] rounded-[14px] p-6 text-white shadow-[0_1px_2px_rgba(0,0,0,0.04),0_1px_6px_rgba(0,0,0,0.04)]">
+        <p className="text-sm opacity-80 mb-2">Summary</p>
+        <div className="text-3xl font-700">
+          ${collectedRevenue.toFixed(2)} Collected
+        </div>
+        <p className="text-sm opacity-70 mt-2">
+          {filteredOrders.filter(o => o.status === 'delivered').length} delivered order{filteredOrders.filter(o => o.status === 'delivered').length !== 1 ? 's' : ''} · ${pendingRevenue.toFixed(2)} pending
+        </p>
       </div>
     </div>
   )
