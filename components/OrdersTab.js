@@ -24,15 +24,24 @@ export default function OrdersTab() {
 
   async function loadOrders() {
     setIsLoading(true)
-    const { data, error } = await supabase
-      .from('orders')
-      .select('*')
-      .order('created_at', { ascending: false })
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .order('created_at', { ascending: false })
 
-    if (!error) {
-      setOrders(data || [])
+      if (error) {
+        console.error('Error loading orders:', error)
+        setOrders([])
+      } else {
+        console.log('Orders loaded:', data)
+        setOrders(data || [])
+      }
+    } catch (err) {
+      console.error('Exception loading orders:', err)
+    } finally {
+      setIsLoading(false)
     }
-    setIsLoading(false)
   }
 
   const filteredOrders = filter === 'all' ? orders : orders.filter(o => o.status === filter)

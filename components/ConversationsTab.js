@@ -24,15 +24,24 @@ export default function ConversationsTab() {
 
   async function loadConversations() {
     setIsLoading(true)
-    const { data, error } = await supabase
-      .from('conversations')
-      .select('*')
-      .order('created_at', { ascending: false })
+    try {
+      const { data, error } = await supabase
+        .from('conversations')
+        .select('*')
+        .order('created_at', { ascending: false })
 
-    if (!error) {
-      setConversations(data || [])
+      if (error) {
+        console.error('Error loading conversations:', error)
+        setConversations([])
+      } else {
+        console.log('Conversations loaded:', data)
+        setConversations(data || [])
+      }
+    } catch (err) {
+      console.error('Exception loading conversations:', err)
+    } finally {
+      setIsLoading(false)
     }
-    setIsLoading(false)
   }
 
   const uniqueUsers = [...new Set(conversations.map(c => c.telegram_user_id))]
