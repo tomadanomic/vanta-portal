@@ -15,10 +15,11 @@ export default function ConversationsTab() {
   const [userMessages, setUserMessages] = useState([])
   const [replyText, setReplyText] = useState('')
   const [sending, setSending] = useState(false)
+  const [filter, setFilter] = useState('all')
 
   useEffect(() => {
     loadConversations()
-    const interval = setInterval(loadConversations, 5000)
+    const interval = setInterval(loadConversations, 3000)
     return () => clearInterval(interval)
   }, [])
 
@@ -31,20 +32,37 @@ export default function ConversationsTab() {
 
       if (error) throw error
 
-      // Group by user
+      // Group by user and track if answered
       const grouped = {}
+      const answeredUsers = new Set()
+
       data?.forEach(conv => {
+        if (conv.event_type === 'ADMIN_REPLY') {
+          answeredUsers.add(conv.telegram_user_id)
+        }
         if (!grouped[conv.telegram_user_id]) {
           grouped[conv.telegram_user_id] = []
         }
         grouped[conv.telegram_user_id].push(conv)
       })
 
-      setConversations(Object.entries(grouped).map(([userId, msgs]) => ({
-        userId,
-        lastMessage: msgs[0],
-        messageCount: msgs.length
-      })))
+      setConversations(
+        Object.entries(grouped)
+          .map(([userId, msgs]) => {
+            const lastMessage = msgs[0]
+            const hasUnanswered = msgs.some(
+              m => m.event_type === 'CUSTOMER_QUESTION' && !answeredUsers.has(userId)
+            )
+            return {
+              userId,
+              lastMessage,
+              messageCount: msgs.length,
+              hasUnanswered,
+              isAnswered: answeredUsers.has(userId)
+            }
+          })
+          .sort((a, b) => (b.hasUnanswered ? 1 : -1))
+      )
 
       setIsLoading(false)
     } catch (err) {
@@ -84,6 +102,7 @@ export default function ConversationsTab() {
       if (response.ok) {
         setReplyText('')
         await loadUserMessages(selectedUser)
+        await loadConversations()
       }
     } catch (err) {
       console.error('Error sending reply:', err)
@@ -92,33 +111,77 @@ export default function ConversationsTab() {
     }
   }
 
+  const filteredConversations = filter === 'all' 
+    ? conversations 
+    : filter === 'unanswered'
+    ? conversations.filter(c => c.hasUnanswered)
+    : conversations.filter(c => c.isAnswered)
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 min-h-96">
       {/* Conversations List */}
       <div className="lg:col-span-1">
-        <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">Conversations</h3>
-        <div className="space-y-2">
+        <div className="mb-4">
+          <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-3">
+            Conversations
+          </h3>
+          <div className="flex gap-2">
+            {['all', 'unanswered', 'answered'].map(f => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`px-3 py-1 rounded-lg text-xs font-medium transition ${
+                  filter === f
+                    ? 'bg-slate-900 dark:bg-white text-white dark:text-black'
+                    : 'bg-slate-100/50 dark:bg-slate-900/50 text-slate-600 dark:text-slate-400'
+                }`}
+              >
+                {f === 'all' ? 'All' : f === 'unanswered' ? '🔴 Unanswered' : '✅ Answered'}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-2 max-h-96 overflow-y-auto">
           {isLoading ? (
-            <div className="text-center py-8 text-gray-500">Loading...</div>
-          ) : conversations.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">No conversations yet</div>
+            <div className="text-center py-8 text-slate-500 dark:text-slate-400 text-sm">
+              Loading...
+            </div>
+          ) : filteredConversations.length === 0 ? (
+            <div className="text-center py-8 text-slate-500 dark:text-slate-400 text-sm">
+              No conversations
+            </div>
           ) : (
-            conversations.map(conv => (
+            filteredConversations.map(conv => (
               <button
                 key={conv.userId}
                 onClick={() => {
                   setSelectedUser(conv.userId)
                   loadUserMessages(conv.userId)
                 }}
-                className={`w-full text-left p-4 rounded-lg border transition ${
+                className={`w-full text-left p-4 rounded-xl backdrop-blur-xl border transition-all ${
                   selectedUser === conv.userId
-                    ? 'border-white bg-gray-900'
-                    : 'border-gray-900 bg-gray-950/50 hover:border-gray-800'
+                    ? 'bg-gradient-to-br from-white/50 to-white/30 dark:from-white/10 dark:to-white/5 border-white/70 dark:border-white/20 shadow-lg'
+                    : 'bg-gradient-to-br from-white/30 to-white/10 dark:from-white/5 dark:to-white/0 border-white/30 dark:border-white/10 hover:border-white/50 dark:hover:border-white/20'
                 }`}
               >
-                <p className="text-white font-medium">ID: {conv.userId}</p>
-                <p className="text-sm text-gray-500 truncate">{conv.lastMessage.event_data}</p>
-                <p className="text-xs text-gray-600 mt-2">{conv.messageCount} messages</p>
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <p className="text-slate-900 dark:text-white font-medium text-sm">
+                    ID: {conv.userId}
+                  </p>
+                  {conv.hasUnanswered && (
+                    <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400 text-xs font-semibold">
+                      <span className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></span>
+                      New
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm text-slate-600 dark:text-slate-400 truncate mb-2">
+                  {conv.lastMessage.event_data}
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-500">
+                  {conv.messageCount} message{conv.messageCount !== 1 ? 's' : ''}
+                </p>
               </button>
             ))
           )}
@@ -128,30 +191,39 @@ export default function ConversationsTab() {
       {/* Message Thread */}
       <div className="lg:col-span-2">
         {selectedUser ? (
-          <div className="rounded-lg border border-gray-900 bg-gray-950/50 backdrop-blur-sm h-full flex flex-col">
+          <div className="rounded-2xl backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/20 dark:from-white/5 dark:to-white/10 border border-white/50 dark:border-white/10 h-full flex flex-col overflow-hidden">
             {/* Header */}
-            <div className="border-b border-gray-900 p-4">
-              <p className="text-sm text-gray-500">Customer ID</p>
-              <p className="text-white font-semibold">{selectedUser}</p>
+            <div className="border-b border-white/20 dark:border-white/10 p-6 backdrop-blur-sm">
+              <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">
+                Customer ID
+              </p>
+              <p className="text-lg font-semibold text-slate-900 dark:text-white">{selectedUser}</p>
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
               {userMessages.map((msg, idx) => (
                 <div
                   key={idx}
                   className={`flex ${msg.event_type === 'ADMIN_REPLY' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`max-w-xs px-4 py-2 rounded-lg ${
+                    className={`max-w-xs px-4 py-3 rounded-2xl backdrop-blur-sm ${
                       msg.event_type === 'ADMIN_REPLY'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-900 text-gray-200'
+                        ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-br-none'
+                        : 'bg-gradient-to-br from-slate-200/50 to-slate-100/50 dark:from-slate-800/50 dark:to-slate-900/50 text-slate-900 dark:text-slate-100 rounded-bl-none border border-white/30 dark:border-white/10'
                     }`}
                   >
                     <p className="text-sm break-words">{msg.event_data}</p>
-                    <p className="text-xs mt-1 opacity-70">
-                      {new Date(msg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                    <p className={`text-xs mt-2 ${
+                      msg.event_type === 'ADMIN_REPLY'
+                        ? 'text-blue-100'
+                        : 'text-slate-500 dark:text-slate-400'
+                    }`}>
+                      {new Date(msg.created_at).toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
                     </p>
                   </div>
                 </div>
@@ -159,7 +231,7 @@ export default function ConversationsTab() {
             </div>
 
             {/* Reply Input */}
-            <div className="border-t border-gray-900 p-4">
+            <div className="border-t border-white/20 dark:border-white/10 p-6 backdrop-blur-sm">
               <div className="flex gap-2">
                 <input
                   type="text"
@@ -167,12 +239,12 @@ export default function ConversationsTab() {
                   onChange={(e) => setReplyText(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && sendReply()}
                   placeholder="Reply as Matt..."
-                  className="flex-1 bg-gray-900 border border-gray-800 text-white px-4 py-2 rounded-lg focus:outline-none focus:border-gray-700"
+                  className="flex-1 px-4 py-3 rounded-xl bg-white/50 dark:bg-slate-900/50 border border-white/30 dark:border-white/10 text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 focus:outline-none focus:border-white/50 dark:focus:border-white/20 transition backdrop-blur-sm"
                 />
                 <button
                   onClick={sendReply}
                   disabled={!replyText.trim() || sending}
-                  className="px-4 py-2 bg-white text-black font-medium rounded-lg hover:bg-gray-100 disabled:opacity-50 transition"
+                  className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 disabled:from-slate-400 disabled:to-slate-500 text-white font-medium rounded-xl transition-all disabled:opacity-50"
                 >
                   Send
                 </button>
@@ -180,8 +252,10 @@ export default function ConversationsTab() {
             </div>
           </div>
         ) : (
-          <div className="rounded-lg border border-gray-900 bg-gray-950/50 backdrop-blur-sm h-full flex items-center justify-center">
-            <p className="text-gray-500">Select a conversation to reply</p>
+          <div className="rounded-2xl backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/20 dark:from-white/5 dark:to-white/10 border border-white/50 dark:border-white/10 h-full flex items-center justify-center">
+            <p className="text-slate-500 dark:text-slate-400">
+              Select a conversation to reply
+            </p>
           </div>
         )}
       </div>

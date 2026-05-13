@@ -1,14 +1,19 @@
 import './globals.css'
+import { ThemeProvider } from './providers'
 
 export const metadata = {
-  title: 'VANTA Portal',
-  description: 'VANTA Peptides Admin Dashboard',
+  title: 'VANTA Admin Portal',
+  description: 'Peptides Business Management',
 }
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
-      <body className="bg-dark text-white">{children}</body>
+    <html lang="en" suppressHydrationWarning>
+      <body className="bg-white dark:bg-black transition-colors">
+        <ThemeProvider>
+          {children}
+        </ThemeProvider>
+      </body>
     </html>
   )
 }

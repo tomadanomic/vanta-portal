@@ -47,44 +47,54 @@ export default function RevenueTab() {
 
   return (
     <div className="space-y-8">
-      {/* Main Stats */}
+      {/* Main Stats with Glass Effect */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="rounded-lg border border-gray-900 bg-gradient-to-br from-green-900/20 to-green-900/5 p-8 backdrop-blur-sm">
-          <p className="text-gray-400 text-sm font-medium mb-2">💵 Cash Collected</p>
-          <p className="text-5xl font-semibold text-green-400">AED {stats.collectedCash}</p>
-          <p className="text-sm text-gray-500 mt-3">{delivered.length} delivered orders</p>
-        </div>
-
-        <div className="rounded-lg border border-gray-900 bg-gradient-to-br from-yellow-900/20 to-yellow-900/5 p-8 backdrop-blur-sm">
-          <p className="text-gray-400 text-sm font-medium mb-2">⏳ Pending Cash</p>
-          <p className="text-5xl font-semibold text-yellow-400">AED {stats.pendingCash}</p>
-          <p className="text-sm text-gray-500 mt-3">{pending.length} pending orders</p>
-        </div>
-
-        <div className="rounded-lg border border-gray-900 bg-gradient-to-br from-blue-900/20 to-blue-900/5 p-8 backdrop-blur-sm">
-          <p className="text-gray-400 text-sm font-medium mb-2">📊 Total Revenue</p>
-          <p className="text-5xl font-semibold text-blue-400">AED {stats.totalRevenue}</p>
-          <p className="text-sm text-gray-500 mt-3">From {stats.totalOrders} orders</p>
-        </div>
+        {[
+          { label: '💵 Cash Collected', value: `AED ${stats.collectedCash}`, subtext: `${delivered.length} delivered`, color: 'from-emerald-500 to-emerald-600' },
+          { label: '⏳ Pending Cash', value: `AED ${stats.pendingCash}`, subtext: `${pending.length} pending`, color: 'from-amber-500 to-amber-600' },
+          { label: '📊 Total Revenue', value: `AED ${stats.totalRevenue}`, subtext: `From ${stats.totalOrders} orders`, color: 'from-blue-500 to-blue-600' }
+        ].map((stat, idx) => (
+          <div
+            key={idx}
+            className="relative rounded-2xl backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/20 dark:from-white/5 dark:to-white/10 border border-white/50 dark:border-white/10 p-8 overflow-hidden group hover:border-white/70 dark:hover:border-white/20 transition"
+          >
+            <div className={`absolute inset-0 bg-gradient-to-br ${stat.color} opacity-5 group-hover:opacity-10 transition`}></div>
+            <p className="text-slate-600 dark:text-slate-400 text-sm font-medium mb-2 relative z-10">
+              {stat.label}
+            </p>
+            <p className="text-5xl font-semibold text-slate-900 dark:text-white relative z-10">
+              {stat.value}
+            </p>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-3 relative z-10">
+              {stat.subtext}
+            </p>
+          </div>
+        ))}
       </div>
 
       {/* Secondary Stats */}
       <div className="grid grid-cols-2 gap-4">
-        <div className="rounded-lg border border-gray-900 bg-gray-950/50 p-6 backdrop-blur-sm">
-          <p className="text-gray-500 text-sm font-medium mb-2">Avg Order Value</p>
-          <p className="text-3xl font-semibold text-white">AED {stats.avgOrderValue}</p>
-        </div>
-        <div className="rounded-lg border border-gray-900 bg-gray-950/50 p-6 backdrop-blur-sm">
-          <p className="text-gray-500 text-sm font-medium mb-2">Collection Rate</p>
-          <p className="text-3xl font-semibold text-white">
-            {orders.length > 0 ? Math.round((delivered.length / orders.length) * 100) : 0}%
-          </p>
-        </div>
+        {[
+          { label: 'Avg Order Value', value: `AED ${stats.avgOrderValue}` },
+          { label: 'Collection Rate', value: `${orders.length > 0 ? Math.round((delivered.length / orders.length) * 100) : 0}%` }
+        ].map((stat, idx) => (
+          <div
+            key={idx}
+            className="rounded-2xl backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/20 dark:from-white/5 dark:to-white/10 border border-white/50 dark:border-white/10 p-6"
+          >
+            <p className="text-slate-600 dark:text-slate-400 text-sm font-medium mb-2">
+              {stat.label}
+            </p>
+            <p className="text-3xl font-semibold text-slate-900 dark:text-white">
+              {stat.value}
+            </p>
+          </div>
+        ))}
       </div>
 
       {/* Cash Flow by Product */}
       <div>
-        <h3 className="text-lg font-semibold text-white mb-4">Revenue by Product</h3>
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Revenue by Product</h3>
         <div className="space-y-3">
           {Object.entries(
             orders.reduce((acc, order) => {
@@ -95,14 +105,17 @@ export default function RevenueTab() {
           )
             .sort(([, a], [, b]) => b - a)
             .map(([product, revenue]) => (
-              <div key={product} className="rounded-lg border border-gray-900 bg-gray-950/50 p-4 backdrop-blur-sm">
-                <div className="flex justify-between items-center">
-                  <p className="text-white font-medium">{product}</p>
-                  <p className="text-green-400 font-semibold">AED {revenue}</p>
+              <div
+                key={product}
+                className="rounded-2xl backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/20 dark:from-white/5 dark:to-white/10 border border-white/50 dark:border-white/10 p-4 hover:border-white/70 dark:hover:border-white/20 transition"
+              >
+                <div className="flex justify-between items-center mb-3">
+                  <p className="text-slate-900 dark:text-white font-medium">{product}</p>
+                  <p className="text-emerald-600 dark:text-emerald-400 font-semibold">AED {revenue}</p>
                 </div>
-                <div className="mt-2 h-2 bg-gray-900 rounded-full overflow-hidden">
+                <div className="h-2 bg-slate-200/50 dark:bg-slate-800/50 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-green-500/50"
+                    className="h-full bg-gradient-to-r from-emerald-500 to-emerald-600"
                     style={{ width: `${(revenue / stats.totalRevenue) * 100}%` }}
                   ></div>
                 </div>
@@ -113,15 +126,18 @@ export default function RevenueTab() {
 
       {/* Recent Collections */}
       <div>
-        <h3 className="text-lg font-semibold text-white mb-4">Recent Collections</h3>
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Recent Collections</h3>
         <div className="space-y-2">
           {delivered.slice(0, 10).map(order => (
-            <div key={order.id} className="flex justify-between items-center p-4 rounded-lg border border-gray-900 bg-gray-950/50 backdrop-blur-sm">
+            <div
+              key={order.id}
+              className="flex justify-between items-center p-4 rounded-xl backdrop-blur-xl bg-gradient-to-br from-white/30 to-white/10 dark:from-white/5 dark:to-white/0 border border-white/30 dark:border-white/10 hover:border-white/50 dark:hover:border-white/20 transition"
+            >
               <div>
-                <p className="text-white font-medium">{order.customer_name}</p>
-                <p className="text-sm text-gray-500">{order.product_name}</p>
+                <p className="text-slate-900 dark:text-white font-medium">{order.customer_name}</p>
+                <p className="text-sm text-slate-600 dark:text-slate-400">{order.product_name}</p>
               </div>
-              <p className="text-green-400 font-semibold">AED {order.total_amount}</p>
+              <p className="text-emerald-600 dark:text-emerald-400 font-semibold">AED {order.total_amount}</p>
             </div>
           ))}
         </div>
