@@ -1,0 +1,34 @@
+════════════════════════════════════════════════════════════════════════════════
+                    DEPLOY PORTAL TO VERCEL - NEXT STEPS
+════════════════════════════════════════════════════════════════════════════════
+
+✅ CODE PUSHED: https://github.com/tomadanomic/vanta-portal
+
+NOW DEPLOY TO VERCEL:
+
+1. Go to https://vercel.com/dashboard
+2. Click "Add New" → "Project"
+3. Click "Import Git Repository"
+4. Select: tomadanomic/vanta-portal
+5. Framework Preset: "Next.js" (auto-detected)
+6. Click "Deploy"
+
+ENVIRONMENT VARIABLES (Vercel will ask):
+  Name: NEXT_PUBLIC_SUPABASE_URL
+  Value: https://gomuzqrugjkctjkrasql.supabase.co
+  
+  Name: NEXT_PUBLIC_SUPABASE_KEY
+  Value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdvbXV6cXJ1Z2prY3Rqa3Jhc3FsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2ODEzMDcsImV4cCI6MjA5NDI1NzMwN30.yMi1L5il9bIAcfVU3xvf2cFa-ney7jMNf7HExlckyeU
+  
+  Name: NEXT_PUBLIC_PORTAL_PASSWORD
+  Value: vanta2025
+
+Wait for deployment to finish (should say "Ready")
+
+ONCE DEPLOYED:
+  - You'll get a URL like: https://vanta-portal-xxx.vercel.app
+  - Visit that URL
+  - Enter password: vanta2025
+  - You should see the Orders dashboard with your test order!
+
+════════════════════════════════════════════════════════════════════════════════
