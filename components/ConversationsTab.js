@@ -8,6 +8,9 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_KEY
 )
 
+console.log('Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL)
+console.log('Supabase Key exists:', !!process.env.NEXT_PUBLIC_SUPABASE_KEY)
+
 export default function ConversationsTab() {
   const [conversations, setConversations] = useState([])
   const [isLoading, setIsLoading] = useState(true)
@@ -20,7 +23,7 @@ export default function ConversationsTab() {
     const interval = setInterval(loadConversations, 5000)
 
     return () => clearInterval(interval)
-  }, [])
+  }, []) // Empty dependency array - run once on mount
 
   async function loadConversations() {
     setIsLoading(true)
