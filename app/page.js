@@ -6,60 +6,68 @@ import { useRouter } from 'next/navigation'
 export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
 
-  const handleLogin = async (e) => {
+  const handleLogin = (e) => {
     e.preventDefault()
-    setError('')
-    setIsLoading(true)
+    const correctPassword = process.env.NEXT_PUBLIC_PORTAL_PASSWORD
 
-    if (password === process.env.NEXT_PUBLIC_PORTAL_PASSWORD) {
-      localStorage.setItem('vanta_authenticated', 'true')
+    if (password === correctPassword) {
+      localStorage.setItem('portal_auth', password)
       router.push('/dashboard')
     } else {
-      setError('Invalid password')
-      setIsLoading(false)
+      setError('Incorrect password')
+      setPassword('')
     }
   }
 
   return (
-    <div className="min-h-screen bg-dark flex items-center justify-center p-4">
+    <div className="min-h-screen bg-black flex items-center justify-center px-4">
       <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold mb-2">🧬 VANTA</h1>
-          <p className="text-gray-400">Admin Portal</p>
+        {/* Logo/Header */}
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-semibold text-white mb-2">VANTA</h1>
+          <p className="text-gray-500">Admin Portal</p>
         </div>
 
-        <form onSubmit={handleLogin} className="space-y-4">
+        {/* Login Form */}
+        <form onSubmit={handleLogin} className="space-y-6">
+          {/* Password Input */}
           <div>
+            <label className="block text-sm font-medium text-gray-400 mb-3">
+              Portal Password
+            </label>
             <input
               type="password"
-              placeholder="Enter password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoFocus
-              className="w-full"
+              onChange={(e) => {
+                setPassword(e.target.value)
+                setError('')
+              }}
+              placeholder="Enter password"
+              className="w-full px-4 py-3 rounded-lg bg-gray-950 border border-gray-800 text-white placeholder:text-gray-600 focus:outline-none focus:border-gray-700 transition"
             />
           </div>
 
+          {/* Error Message */}
           {error && (
-            <div className="bg-red-900/20 border border-red-500 rounded-lg p-3 text-red-400 text-sm">
+            <div className="px-4 py-3 rounded-lg bg-red-900/20 border border-red-900/50 text-red-400 text-sm">
               {error}
             </div>
           )}
 
+          {/* Submit Button */}
           <button
             type="submit"
-            disabled={isLoading}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-lg disabled:opacity-50"
+            className="w-full py-3 bg-white text-black font-semibold rounded-lg hover:bg-gray-100 transition"
           >
-            {isLoading ? 'Logging in...' : 'Login'}
+            Sign In
           </button>
         </form>
 
-        <p className="text-center text-gray-500 text-sm mt-6">
-          VANTA Peptides Management System
+        {/* Footer */}
+        <p className="text-center text-gray-600 text-sm mt-8">
+          VANTA Peptides © 2026
         </p>
       </div>
     </div>

@@ -8,52 +8,71 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_KEY?.replace(/\s/g, '')
 )
 
-const BOT_URL = 'https://vanta-telegram-bot.vercel.app'
-
 export default function ConversationsTab() {
   const [conversations, setConversations] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [selectedUser, setSelectedUser] = useState(null)
+  const [userMessages, setUserMessages] = useState([])
   const [replyText, setReplyText] = useState('')
-  const [isSending, setIsSending] = useState(false)
+  const [sending, setSending] = useState(false)
 
   useEffect(() => {
     loadConversations()
-    
-    // Refresh every 5 seconds
     const interval = setInterval(loadConversations, 5000)
-
     return () => clearInterval(interval)
   }, [])
 
   async function loadConversations() {
-    setIsLoading(true)
     try {
       const { data, error } = await supabase
         .from('conversations')
         .select('*')
         .order('created_at', { ascending: false })
 
-      if (error) {
-        console.error('Error loading conversations:', error)
-        setConversations([])
-      } else {
-        console.log('Conversations loaded:', data)
-        setConversations(data || [])
-      }
-    } catch (err) {
-      console.error('Exception loading conversations:', err)
-    } finally {
+      if (error) throw error
+
+      // Group by user
+      const grouped = {}
+      data?.forEach(conv => {
+        if (!grouped[conv.telegram_user_id]) {
+          grouped[conv.telegram_user_id] = []
+        }
+        grouped[conv.telegram_user_id].push(conv)
+      })
+
+      setConversations(Object.entries(grouped).map(([userId, msgs]) => ({
+        userId,
+        lastMessage: msgs[0],
+        messageCount: msgs.length
+      })))
+
       setIsLoading(false)
+    } catch (err) {
+      console.error('Error loading conversations:', err)
+    }
+  }
+
+  async function loadUserMessages(userId) {
+    try {
+      const { data, error } = await supabase
+        .from('conversations')
+        .select('*')
+        .eq('telegram_user_id', userId)
+        .order('created_at', { ascending: true })
+
+      if (error) throw error
+      setUserMessages(data || [])
+    } catch (err) {
+      console.error('Error loading messages:', err)
     }
   }
 
   async function sendReply() {
     if (!replyText.trim() || !selectedUser) return
 
-    setIsSending(true)
+    setSending(true)
     try {
-      const response = await fetch(`${BOT_URL}/api/send-admin-reply`, {
+      const response = await fetch('/api/send-admin-reply', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -62,117 +81,109 @@ export default function ConversationsTab() {
         })
       })
 
-      if (!response.ok) throw new Error('Failed to send reply')
-
-      setReplyText('')
-      // Reload conversations to show the new reply
-      setTimeout(loadConversations, 500)
-    } catch (error) {
-      console.error('Error sending reply:', error)
-      alert('Failed to send reply. Check console.')
+      if (response.ok) {
+        setReplyText('')
+        await loadUserMessages(selectedUser)
+      }
+    } catch (err) {
+      console.error('Error sending reply:', err)
     } finally {
-      setIsSending(false)
+      setSending(false)
     }
   }
 
-  const uniqueUsers = [...new Set(conversations.map(c => c.telegram_user_id))]
-  const userConversations = selectedUser
-    ? conversations.filter(c => c.telegram_user_id === selectedUser)
-    : []
-
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-      {/* Users List */}
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 min-h-96">
+      {/* Conversations List */}
       <div className="lg:col-span-1">
-        <div className="bg-dark-secondary rounded-lg border border-dark-tertiary overflow-hidden">
-          <div className="bg-dark/50 border-b border-dark-tertiary px-4 py-3">
-            <h3 className="font-medium text-sm">Users ({uniqueUsers.length})</h3>
-          </div>
-          <div className="divide-y divide-dark-tertiary max-h-96 overflow-y-auto">
-            {uniqueUsers.length === 0 ? (
-              <div className="p-4 text-center text-gray-400 text-sm">No conversations</div>
-            ) : (
-              uniqueUsers.map(userId => {
-                const userMsgs = conversations.filter(c => c.telegram_user_id === userId)
-                const lastMsg = userMsgs[0]
-                return (
-                  <button
-                    key={userId}
-                    onClick={() => setSelectedUser(userId)}
-                    className={`w-full text-left px-4 py-3 transition ${
-                      selectedUser === userId
-                        ? 'bg-blue-600/20 border-l-2 border-blue-500'
-                        : 'hover:bg-dark/50'
-                    }`}
-                  >
-                    <p className="font-mono text-xs text-gray-400">ID: {userId}</p>
-                    <p className="text-xs text-gray-400 mt-1">{userMsgs.length} messages</p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {new Date(lastMsg.created_at).toLocaleDateString()}
-                    </p>
-                  </button>
-                )
-              })
-            )}
-          </div>
+        <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">Conversations</h3>
+        <div className="space-y-2">
+          {isLoading ? (
+            <div className="text-center py-8 text-gray-500">Loading...</div>
+          ) : conversations.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">No conversations yet</div>
+          ) : (
+            conversations.map(conv => (
+              <button
+                key={conv.userId}
+                onClick={() => {
+                  setSelectedUser(conv.userId)
+                  loadUserMessages(conv.userId)
+                }}
+                className={`w-full text-left p-4 rounded-lg border transition ${
+                  selectedUser === conv.userId
+                    ? 'border-white bg-gray-900'
+                    : 'border-gray-900 bg-gray-950/50 hover:border-gray-800'
+                }`}
+              >
+                <p className="text-white font-medium">ID: {conv.userId}</p>
+                <p className="text-sm text-gray-500 truncate">{conv.lastMessage.event_data}</p>
+                <p className="text-xs text-gray-600 mt-2">{conv.messageCount} messages</p>
+              </button>
+            ))
+          )}
         </div>
       </div>
 
-      {/* Conversation */}
-      <div className="lg:col-span-3">
-        <div className="bg-dark-secondary rounded-lg border border-dark-tertiary overflow-hidden flex flex-col h-96">
-          {selectedUser ? (
-            <>
-              <div className="bg-dark/50 border-b border-dark-tertiary px-4 py-3">
-                <h3 className="font-medium text-sm">User {selectedUser}</h3>
-              </div>
-              <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                {userConversations.length === 0 ? (
-                  <div className="text-center text-gray-400 text-sm">No messages</div>
-                ) : (
-                  userConversations.map((msg, idx) => (
-                    <div key={idx} className="text-sm">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className={`px-2 py-1 rounded text-xs font-mono ${
-                          msg.event_type === 'ADMIN_REPLY'
-                            ? 'bg-green-900/30 text-green-400'
-                            : 'bg-blue-600/20 text-blue-400'
-                        }`}>
-                          {msg.event_type}
-                        </span>
-                        <span className="text-gray-500 text-xs">
-                          {new Date(msg.created_at).toLocaleTimeString()}
-                        </span>
-                      </div>
-                      <p className="text-gray-300 break-words">{msg.event_data}</p>
-                    </div>
-                  ))
-                )}
-              </div>
-              {/* Reply Input */}
-              <div className="border-t border-dark-tertiary bg-dark/50 p-3 space-y-2">
-                <textarea
+      {/* Message Thread */}
+      <div className="lg:col-span-2">
+        {selectedUser ? (
+          <div className="rounded-lg border border-gray-900 bg-gray-950/50 backdrop-blur-sm h-full flex flex-col">
+            {/* Header */}
+            <div className="border-b border-gray-900 p-4">
+              <p className="text-sm text-gray-500">Customer ID</p>
+              <p className="text-white font-semibold">{selectedUser}</p>
+            </div>
+
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              {userMessages.map((msg, idx) => (
+                <div
+                  key={idx}
+                  className={`flex ${msg.event_type === 'ADMIN_REPLY' ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div
+                    className={`max-w-xs px-4 py-2 rounded-lg ${
+                      msg.event_type === 'ADMIN_REPLY'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-900 text-gray-200'
+                    }`}
+                  >
+                    <p className="text-sm break-words">{msg.event_data}</p>
+                    <p className="text-xs mt-1 opacity-70">
+                      {new Date(msg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Reply Input */}
+            <div className="border-t border-gray-900 p-4">
+              <div className="flex gap-2">
+                <input
+                  type="text"
                   value={replyText}
                   onChange={(e) => setReplyText(e.target.value)}
-                  placeholder="Type reply from Matt..."
-                  rows="2"
-                  className="w-full bg-dark-secondary border border-dark-tertiary rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 resize-none"
+                  onKeyPress={(e) => e.key === 'Enter' && sendReply()}
+                  placeholder="Reply as Matt..."
+                  className="flex-1 bg-gray-900 border border-gray-800 text-white px-4 py-2 rounded-lg focus:outline-none focus:border-gray-700"
                 />
                 <button
                   onClick={sendReply}
-                  disabled={isSending || !replyText.trim()}
-                  className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium py-2 rounded-lg transition text-sm"
+                  disabled={!replyText.trim() || sending}
+                  className="px-4 py-2 bg-white text-black font-medium rounded-lg hover:bg-gray-100 disabled:opacity-50 transition"
                 >
-                  {isSending ? 'Sending...' : '📤 Send Reply'}
+                  Send
                 </button>
               </div>
-            </>
-          ) : (
-            <div className="flex items-center justify-center h-full text-gray-400">
-              Select a user to view conversation
             </div>
-          )}
-        </div>
+          </div>
+        ) : (
+          <div className="rounded-lg border border-gray-900 bg-gray-950/50 backdrop-blur-sm h-full flex items-center justify-center">
+            <p className="text-gray-500">Select a conversation to reply</p>
+          </div>
+        )}
       </div>
     </div>
   )
