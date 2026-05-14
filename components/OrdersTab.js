@@ -151,7 +151,7 @@ export default function OrdersTab({ setActiveTab }) {
 
   const deliveredRevenue = orders
     .filter(o => o.status === 'delivered')
-    .reduce((sum, o) => sum + calculateOrderTotal(o.product_name, o.quantity), 0)
+    .reduce((sum, o) => sum + (o.total_amount || calculateOrderTotal(o.product_name, o.quantity)), 0)
 
   return (
     <div className="space-y-6">
@@ -266,13 +266,13 @@ export default function OrdersTab({ setActiveTab }) {
 
                   <div className="flex-1 min-w-[150px]">
                     <p className="text-[#545458] text-sm line-clamp-1">
-                      {order.products?.join(', ') || 'N/A'}
+                      {order.product_name || 'N/A'}
                     </p>
                   </div>
 
                   <div className="flex items-center gap-4">
-                      <p className="text-[#137333] font-600 text-sm min-w-[80px] text-right">
-                        ${calculateOrderTotal(order.product_name, order.quantity).toFixed(2)} AED
+                    <p className="text-[#137333] font-600 text-sm min-w-[80px] text-right">
+                        AED ${(order.total_amount || calculateOrderTotal(order.product_name, order.quantity)).toFixed(2)}
                       </p>
                     <div
                       className="px-3 py-1.5 rounded-[10px] text-xs font-600 whitespace-nowrap"
@@ -321,12 +321,12 @@ export default function OrdersTab({ setActiveTab }) {
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <p className="text-[#545458]">Products</p>
-                    <p className="text-[#0A0A0A] font-500">{selectedOrder.products?.join(', ')}</p>
+                    <p className="text-[#0A0A0A] font-500">{selectedOrder.product_name || 'N/A'}</p>
                   </div>
                     <div className="flex justify-between">
                       <p className="text-[#545458]">Total</p>
                       <p className="text-[#137333] font-600">
-                        ${calculateOrderTotal(selectedOrder.product_name, selectedOrder.quantity).toFixed(2)} AED
+                        AED ${(selectedOrder.total_amount || calculateOrderTotal(selectedOrder.product_name, selectedOrder.quantity)).toFixed(2)}
                       </p>
                     </div>
                   <div className="flex justify-between">
@@ -354,7 +354,7 @@ export default function OrdersTab({ setActiveTab }) {
                   Delivery Address
                 </h3>
                 <p className="text-sm text-[#0A0A0A] whitespace-pre-wrap">
-                  {selectedOrder.delivery_address}
+                  {selectedOrder.address || 'N/A'}
                 </p>
               </div>
 
@@ -378,7 +378,7 @@ export default function OrdersTab({ setActiveTab }) {
                   <div className="bg-[#FAFAF7] rounded-[10px] p-4 space-y-2 max-h-48 overflow-y-auto">
                     {conversations.slice(-3).map((msg, idx) => (
                       <div key={idx} className="text-xs">
-                        <p className="text-[#545458]">{msg.message}</p>
+                        <p className="text-[#545458]">{msg.event_data || '(no text)'}</p>
                         <p className="text-[#8A8A8E] mt-1 text-xs">
                           {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </p>

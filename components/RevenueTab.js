@@ -77,11 +77,11 @@ export default function RevenueTab() {
 
   const collectedRevenue = filteredOrders
     .filter(o => o.status === 'delivered')
-    .reduce((sum, o) => sum + calculateOrderTotal(o.product_name, o.quantity), 0)
+    .reduce((sum, o) => sum + (o.total_amount || calculateOrderTotal(o.product_name, o.quantity)), 0)
 
   const pendingRevenue = filteredOrders
     .filter(o => o.status === 'pending' || o.status === 'in_transit')
-    .reduce((sum, o) => sum + calculateOrderTotal(o.product_name, o.quantity), 0)
+    .reduce((sum, o) => sum + (o.total_amount || calculateOrderTotal(o.product_name, o.quantity)), 0)
 
   const totalRevenue = collectedRevenue + pendingRevenue
 
@@ -188,13 +188,13 @@ export default function RevenueTab() {
 
                     <div className="flex-1 min-w-[150px]">
                       <p className="text-[#545458] text-sm line-clamp-1">
-                        {order.products?.join(', ') || 'N/A'}
+                        {order.product_name || 'N/A'}
                       </p>
                     </div>
 
                     <div className="flex items-center gap-4">
                       <p className="text-[#137333] font-600 text-sm min-w-[80px] text-right">
-                        ${calculateOrderTotal(order.product_name, order.quantity).toFixed(2)} AED
+                        AED ${(order.total_amount || calculateOrderTotal(order.product_name, order.quantity)).toFixed(2)}
                       </p>
                       <div
                         className="px-3 py-1.5 rounded-[10px] text-xs font-600 whitespace-nowrap"
